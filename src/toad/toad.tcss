@@ -114,6 +114,7 @@ Version {
     overlay: screen;
     width: auto;
     color: $text-success 50%;
+    text-style: bold;
 }
 
 Explain {
@@ -135,6 +136,17 @@ Explain {
     display: none;  
     overflow: auto;
     width: 100%;    
+}
+
+RunOutput {
+    border-left: vkey $secondary;
+    background: $foreground 4%;
+    padding: 1 2 0 1;   
+    margin: 1 0;    
+    overflow: auto;
+    & > Label {
+        width: auto;
+    }
 }
 
 Footer {

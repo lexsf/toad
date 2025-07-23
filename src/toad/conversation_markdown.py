@@ -3,11 +3,11 @@ from textual.widgets._markdown import MarkdownBlock
 from textual.content import Content
 
 
-class ConversationCodeFence(Markdown.BLOCKS["code_fence"]):
+class ConversationCodeFence(Markdown.BLOCKS["fence"]):
     pass
 
 
-CUSTOM_BLOCKS = {"code_fence": ConversationCodeFence}
+CUSTOM_BLOCKS = {"fence": ConversationCodeFence}
 
 
 class ConversationMarkdown(Markdown):

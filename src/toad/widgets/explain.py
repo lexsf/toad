@@ -8,7 +8,7 @@ import llm
 
 
 SYSTEM = """\
-You are a helpful programming assistant. You will explain the user's requested programming topic clearly an succinctly.
+You are a helpful programming assistant. You will explain the user's requested programming topic clearly and succinctly.
 """
 
 
@@ -27,7 +27,7 @@ class Explain(containers.VerticalScroll):
         self.screen.focus()
 
     def on_mount(self) -> None:
-        self.content.anchor()
+        self.anchor()
 
     # async def on_blur(self) -> None:
     #     self.display = False

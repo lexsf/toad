@@ -8,11 +8,12 @@ from textual import events
 from textual.binding import Binding
 from textual.widget import Widget
 from textual.widgets import Static
-from textual.widgets._markdown import MarkdownBlock
+from textual.widgets._markdown import MarkdownBlock, MarkdownFence
 from textual.geometry import Offset
 from textual.reactive import var
 from textual.css.query import NoMatches
 
+import llm
 
 from toad import messages
 from toad.widgets.menu import Menu
@@ -22,6 +23,7 @@ from toad.widgets.welcome import Welcome
 from toad.widgets.user_input import UserInput
 from toad.widgets.agent_response import AgentResponse
 from toad.widgets.explain import Explain
+from toad.widgets.run_output import RunOutput
 
 from toad.menus import CONVERSATION_MENUS
 
@@ -210,6 +212,14 @@ I would like to add controls to these widgets to export the table as CSV, which 
 # | `show_cursor`   | `bool` | `True`  | Show a cell cursor                 |
 # """
 
+MD = """
+```python
+for n in range(10):
+    print(n)
+"""
+
+MD = ""
+
 
 class Cursor(Static):
     follow_widget: var[Widget | None] = var(None)
@@ -274,6 +284,7 @@ class Conversation(containers.Vertical):
     contents = getters.query_one("#contents", containers.VerticalScroll)
     cursor = getters.query_one(Cursor)
     prompt = getters.query_one(Prompt)
+    llm_model = var(lambda: llm.get_model("gpt-4o"))
 
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
@@ -300,7 +311,7 @@ class Conversation(containers.Vertical):
     @on(messages.UserInputSubmitted)
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
         await self.post(UserInput(event.body))
-        agent_response = AgentResponse()
+        agent_response = AgentResponse(self.llm_model)
         await self.post(agent_response)
         agent_response.send_prompt(event.body)
 
@@ -416,9 +427,9 @@ class Conversation(containers.Vertical):
 
         from toad.code_analyze import get_special_name_from_code
 
-        if block.name == "fence":
+        if block.name == "fence" and isinstance(block, MarkdownFence):
             for numeral, name in enumerate(
-                get_special_name_from_code(block._content.plain, block._token.info), 1
+                get_special_name_from_code(block._content.plain, block.lexer), 1
             ):
                 menu_options.append(
                     Menu.Item(f"explain('{name}')", f"Explain '{name}'", f"{numeral}")
@@ -452,6 +463,36 @@ class Conversation(containers.Vertical):
             else:
                 PROMPT = f"Explain the following:\n{block.source}"
             self.screen.query_one(Explain).send_prompt(PROMPT)
+
+    def action_run(self) -> None:
+        if (block := self.cursor_block) is not None and block.source:
+            assert isinstance(block, MarkdownFence)
+            self.execute(block._content.plain, block.lexer)
+
+    @work
+    async def execute(self, code: str, language: str) -> None:
+        self.notify(repr(language))
+        if language == "python":
+            command = "python run"
+        elif language == "bash":
+            command = "sh run"
+        else:
+            self.notify(
+                f"Toad doesn't know how to run '{language}' code yet",
+                title="Run",
+                severity="error",
+            )
+        run_output = RunOutput()
+        await self.post(run_output, anchor=True)
+        with open("run", mode="wt", encoding="utf-8") as source:
+            source.write(code)
+
+        process = await asyncio.create_subprocess_shell(
+            command, stdout=asyncio.subprocess.PIPE
+        )
+        while data := await process.stdout.readline():
+            line = data.decode("utf-8")
+            run_output.output += line
 
     def watch_block_cursor(self, block_cursor: int) -> None:
         if block_cursor == -1:

@@ -1,21 +1,19 @@
 import llm
+from llm import Model
 
 from textual import work
 from textual.widgets import Markdown
 from toad import messages
 
 SYSTEM = """\
-You are an intern at a tech company.
-It is your job to generate code when asked.
-Add inline documentation to your code, and always use type hinting where appropriate.
-Include all imports required for the code to run.
-Limit your responses to the requested code with little additional detail.
+If asked to output code add inline documentation in the google style format, and always use type hinting where appropriate.
+Avoid using external libraries where possible, and favor code that writes output to the terminal.
 """
 
 
 class AgentResponse(Markdown):
-    def __init__(self, markdown: str | None = None) -> None:
-        self.model = llm.get_model("gpt-4o")
+    def __init__(self, model: Model, markdown: str | None = None) -> None:
+        self.model = model
         super().__init__(markdown)
 
     @work(thread=True)
