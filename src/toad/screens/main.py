@@ -1,7 +1,7 @@
 from textual import on
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.reactive import var
+from textual.reactive import var, reactive
 from textual import getters
 from textual.widgets import Footer
 from textual import containers
@@ -18,6 +18,9 @@ class MainScreen(Screen, can_focus=False):
     throbber: getters.query_one[Throbber] = getters.query_one("#throbber")
     conversation = getters.query_one(Conversation)
 
+    column = reactive(False)
+    column_width = reactive(100)
+
     def compose(self) -> ComposeResult:
         yield Version("Toad v0.1")
         with containers.Center():
@@ -27,3 +30,14 @@ class MainScreen(Screen, can_focus=False):
 
     def action_focus_prompt(self) -> None:
         self.conversation.focus_prompt()
+
+    def watch_column(self, column: bool) -> None:
+        self.set_class(column, "-column")
+        self.conversation.styles.max_width = (
+            max(10, self.column_width) if column else None
+        )
+
+    def watch_column_width(self, column_width: int) -> None:
+        self.conversation.styles.max_width = (
+            max(10, column_width) if self.column else None
+        )

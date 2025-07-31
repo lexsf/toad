@@ -1,6 +1,27 @@
 from toad.settings import SchemaDict
 
+import llm
+
+MODEL_CHOICES = sorted([model.model_id for model in llm.get_models()])
+
+
 SCHEMA: list[SchemaDict] = [
+    {
+        "key": "llm",
+        "title": "LLM Model",
+        "help": "Configure the model used in chat. Note that this is temporary until the project feature is implemented",
+        "type": "object",
+        "fields": [
+            {
+                "key": "model",
+                "type": "choices",
+                "title": "Model name",
+                "help": "The model to use.",
+                "choices": MODEL_CHOICES,
+                "default": "gpt-3.5-turbo",
+            }
+        ],
+    },
     {
         "key": "ui",
         "title": "User interface settings",
@@ -17,7 +38,7 @@ SCHEMA: list[SchemaDict] = [
             {
                 "key": "column-width",
                 "title": "Width of the column",
-                "help": "Width of the column if enabled.",
+                "help": "Width of the column if enabled. Minimum 40 characters.",
                 "type": "integer",
                 "default": 100,
                 "validate": [{"type": "minimum", "value": 40}],
@@ -28,23 +49,18 @@ SCHEMA: list[SchemaDict] = [
                 "help": "One of the builtin Textual themes.",
                 "type": "choices",
                 "default": "dracula",
-                "validate": [
-                    {
-                        "type": "choices",
-                        "choices": [
-                            "textual-dark",
-                            "textual-light",
-                            "nord",
-                            "gruvbox",
-                            "catppuccin-mocha",
-                            "dracula",
-                            "tokyo-night",
-                            "monokai",
-                            "flexoki",
-                            "catppuccin-late",
-                            "solarized-light",
-                        ],
-                    }
+                "choices": [
+                    "catppuccin-latte",
+                    "catppuccin-mocha",
+                    "dracula",
+                    "flexoki",
+                    "gruvbox",
+                    "monokai",
+                    "nord",
+                    "solarized-light",
+                    "textual-dark",
+                    "textual-light",
+                    "tokyo-night",
                 ],
             },
         ],

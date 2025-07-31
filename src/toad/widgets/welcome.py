@@ -20,17 +20,7 @@ WELCOME_MD = """\
 
 Welcome, **Will**!
 
-I am your friendly batrachian coding assistant.
 
-I can help you plan, analyze, debug and write code.
-To get started, talk to me in plain English and I will do my best to help!
-
-
-| command | Explanation |
-| --- | --- |
-| `/edit` <PATH> | Edit the file at the given path. |
-| `/tree` | Show all the files in the current working directory in a tree. |
-| `/shell` | Drop in to the shell. |
 """
 
 

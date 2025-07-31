@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import asyncio
 from contextlib import suppress
+from pathlib import Path
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual import containers
@@ -292,7 +294,7 @@ class Conversation(containers.Vertical):
         Binding("alt+down", "cursor_down", "Block down"),
         Binding("enter", "select_block", "Select"),
         Binding("escape", "dismiss", "Dismiss", show=False),
-        Binding("f1", "settings", "Settings"),
+        Binding("f2,ctrl+comma", "settings", "Settings"),
     ]
 
     busy_count = var(0)
@@ -375,6 +377,10 @@ class Conversation(containers.Vertical):
                 classes="note",
             )
         )
+        notes_path = Path(__file__).parent / "../../../notes.md"
+        from textual.widgets import Markdown
+
+        await self.post(Markdown(notes_path.read_text()))
 
     def on_click(self, event: events.Click) -> None:
         if event.widget is not None:
@@ -502,6 +508,7 @@ class Conversation(containers.Vertical):
         from toad.screens.settings import SettingsScreen
 
         await self.app.push_screen_wait(SettingsScreen())
+        self.app.save_settings()
 
     @work
     async def execute(self, code: str, language: str) -> None:

@@ -53,9 +53,7 @@ def condense_path(path: str, width: int, *, prefix: str = "") -> str:
 
 
 class CondensedPath(Static):
-    path = reactive(
-        "/Users/willmcgugan/projects/toad/foo/bar/more_projects/long/long/path"
-    )
+    path = reactive(os.path.curdir)
 
     def on_resize(self) -> None:
         self.watch_path(self.path)

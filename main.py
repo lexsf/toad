@@ -31,7 +31,7 @@ from textual.widgets import (
     TabbedContent,
     TabPane,
 )
-from textual.visual import Visual
+from textual.visual import Visual, RenderOptions
 from textual import containers
 
 ASCII_TOAD = r"""
@@ -67,15 +67,6 @@ Welcome, **Will**!
 
 I am your friendly batrachian coding assistant.
 
-I can help you plan, analyze, debug and write code.
-To get started, talk to me in plain English and I will do my best to help!
-
-
-| command | Explanation |
-| --- | --- |
-| `/edit` <PATH> | Edit the file at the given path. |
-| `/tree` | Show all the files in the current working directory in a tree. |
-| `/shell` | Drop in to the shell. |
 """
 
 OUTPUT_MD = """\
@@ -135,30 +126,8 @@ class ThrobberVisual(Visual):
     gradient = Gradient.from_colors(*[Color.parse(color) for color in COLORS])
 
     def render_strips(
-        self,
-        rules: RulesMap,
-        width: int,
-        height: int | None,
-        style: Style,
-        selection: Selection | None = None,
-        selection_style: Style | None = None,
-        post_style: Style | None = None,
+        self, width: int, height: int | None, style: Style, options: RenderOptions
     ) -> list[Strip]:
-        """Render the Visual into an iterable of strips.
-
-        Args:
-            rules: A mapping of style rules, such as the Widgets `styles` object.
-            width: Width of desired render.
-            height: Height of desired render or `None` for any height.
-            style: The base style to render on top of.
-            selection: Selection information, if applicable, otherwise `None`.
-            selection_style: Selection style if `selection` is not `None`.
-            post_style: Optional style to apply post render.
-
-        Returns:
-            An list of Strips.
-        """
-
         time = monotonic()
         gradient = self.gradient
         strips = [

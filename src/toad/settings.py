@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import cached_property
-
+from json import dumps
 from dataclasses import dataclass
-from typing import Iterable, Sequence, TypedDict, Required
+from typing import Callable, Iterable, KeysView, Sequence, TypedDict, Required
 
 from toad._loop import loop_last
 
@@ -16,6 +17,7 @@ class Setting:
     title: str
     type: str = "object"
     help: str = ""
+    choices: list[str] | None = None
     default: object | None = None
     validate: list[dict] | None = None
     children: dict[str, Setting] | None = None
@@ -28,6 +30,7 @@ class SchemaDict(TypedDict, total=False):
     title: Required[str]
     type: Required[str]
     help: str
+    choices: list[str] | None
     default: object
     fields: list[SchemaDict]
     validate: list[dict]
@@ -81,7 +84,7 @@ def get_setting[ExpectType](
                 )
             return result
         else:
-            sub_settings = settings[key_component]
+            sub_settings = settings.setdefault(key_component, {})
             assert isinstance(sub_settings, dict)
             settings = sub_settings
     raise KeyError(key)
@@ -104,6 +107,7 @@ class Schema:
             if key not in settings:
                 settings = settings[key] = {}
 
+    @property
     def defaults(self) -> dict[str, object]:
         settings: dict[str, object] = {}
 
@@ -127,18 +131,32 @@ class Schema:
         return settings
 
     @cached_property
-    def keys(self) -> Sequence[str]:
-        def get_keys(setting: Setting) -> Iterable[str]:
+    def key_to_type(self) -> Mapping[str, type]:
+        TYPE_MAP = {
+            "object": SchemaDict,
+            "string": str,
+            "integer": int,
+            "boolean": bool,
+            "choices": str,
+        }
+
+        def get_keys(setting: Setting) -> Iterable[tuple[str, type]]:
             if setting.type == "object" and setting.children:
                 for child in setting.children.values():
                     yield from get_keys(child)
             else:
-                yield setting.key
+                yield (setting.key, TYPE_MAP[setting.type])
 
-        keys = [
-            key for setting in self.settings_map.values() for key in get_keys(setting)
-        ]
+        keys = {
+            key: value_type
+            for setting in self.settings_map.values()
+            for key, value_type in get_keys(setting)
+        }
         return keys
+
+    @property
+    def keys(self) -> KeysView:
+        return self.key_to_type.keys()
 
     @cached_property
     def settings_map(self) -> dict[str, Setting]:
@@ -167,6 +185,7 @@ class Schema:
                     name,
                     schema["title"],
                     schema_type,
+                    choices=schema.get("choices"),
                     help=schema.get("help") or "",
                     default=schema.get("default", default),
                     validate=schema.get("validate"),
@@ -182,19 +201,70 @@ class Schema:
 class Settings:
     """Stores schema backed settings."""
 
-    def __init__(self, schema: Schema, settings: dict[str, object]) -> None:
+    def __init__(
+        self,
+        schema: Schema,
+        settings: dict[str, object],
+        on_set_callback: Callable[[str, object]] | None = None,
+    ) -> None:
         self._schema = schema
         self._settings = settings
+        self._on_set_callback = on_set_callback
+        self._changed: bool = False
+
+    @property
+    def changed(self) -> bool:
+        return self._changed
+
+    def up_to_date(self) -> None:
+        """Set settings as up to date (clears changed flag)."""
+        self._changed = False
+
+    @property
+    def json(self) -> str:
+        """Settings in JSON form."""
+        settings_json = dumps(self._settings, indent=4, separators=(", ", ": "))
+        return settings_json
+
+    def set_all(self) -> None:
+        if self._on_set_callback is not None:
+            for key in self._schema.keys:
+                self._on_set_callback(key, self.get(key))
 
     def get[ExpectType](
-        self, key: str, expect_type: type[ExpectType] = object
+        self, key: str, expect_type: type[ExpectType] = object, expand: bool = True
     ) -> ExpectType:
         from os.path import expandvars
 
-        setting = get_setting(self._settings, key, expect_type=expect_type)
-        if isinstance(setting, str):
-            setting = expandvars(setting)
-        return setting
+        sub_settings = self._settings
+        for last, sub_key in loop_last(parse_key(key)):
+            if last:
+                if (value := sub_settings.get(sub_key)) is None:
+                    return expect_type()
+                if isinstance(value, str) and expand:
+                    value = expandvars(value)
+                if not isinstance(value, expect_type):
+                    raise InvalidValue(
+                        f"key {sub_key!r} is not of expected type {expect_type.__name__}"
+                    )
+                return value
+            if not isinstance(
+                (sub_settings := sub_settings.setdefault(sub_key, {})), dict
+            ):
+                return expect_type()
+        assert False, "Can't get here"
+
+    def set(self, key: str, value: object) -> None:
+        setting = self._settings
+        for last, sub_key in loop_last(parse_key(key)):
+            if last:
+                if setting[sub_key] != value:
+                    setting[sub_key] = value
+                    self._changed = True
+            else:
+                setting = setting.setdefault(sub_key, {})
+        if self._on_set_callback is not None:
+            self._on_set_callback(key, value)
 
 
 if __name__ == "__main__":
@@ -211,4 +281,4 @@ if __name__ == "__main__":
 
     print(schema.settings_map)
 
-    print(schema.keys)
+    print(schema.key_to_type)

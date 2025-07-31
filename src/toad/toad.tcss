@@ -10,10 +10,13 @@ Throbber {
 } 
 
 Conversation {
-    height: 1fr;
-    max-width: 100;    
+    height: 1fr;    
     background: black 10%;
     layers: base prompt float;        
+
+    &.-column {
+        max-width: 100;
+    }
 
     # Prompt {
         
@@ -33,7 +36,7 @@ Conversation {
         overflow: hidden auto;     
     }
     #contents > * {                        
-        & > MarkdownBlock:last-child {
+        & > MarkdownBlock:last-child {            
             margin-bottom: 0;     
         }        
     }
@@ -60,39 +63,86 @@ Conversation {
 SettingsScreen {
     
     overflow: hidden;
-    background: $background;
+    background: $background 60%;
+    align-horizontal: right;
 
-    SettingsInput {
+    #contents {
+        width: 50%;
+        padding: 0 1;    
+        background: black 10%;                
+    }
+
+
+    .hidden {
+        display: none;
+    }
+
+    
+    .setting:last-child .input {        
         margin: 1 0 0 0;        
     }
 
-    Checkbox {
-        margin-top: 1;
-    }
-    
-    .container {
-        margin: 1;    
-        border: wide $secondary-muted;   
-        padding: 0 0 1 0;         
-        &:focus-within {
-            border: wide $secondary;                           
+    Input,Select SelectCurrent, Checkbox {
+        border: tall black 20%;
+        &:focus {
+            border: tall $primary;
         }
-        &:last-child {
-            margin: 1 1 0 1;
+    }
+    Select:focus > SelectCurrent {        
+        border: tall $primary;        
+    }
+
+    .input {
+        margin: 1 0 1 0;        
+    }
+
+    Input.-invalid {
+        border: tall $error 60%;
+    }
+
+    .search-container {
+        dock: top;
+        padding: 1 0;
+    }
+    .setting-group {
+        padding: 0;    
+        & > .setting-object:last-child {            
+            margin-bottom: 0;            
         }
     }
 
-    & > .container {
-        margin: 0 1;
-    }
-
-    Label.title {
-        margin-top: 1;
+    .setting-object {        
+        border: tall $secondary-muted;
+        &:light {
+            border: tall $foreground 20%;
+        }   
+        padding: 0 1;
         
+        &:focus-within {
+            border: tall $secondary;         
+        }
+        .heading {
+            margin-bottom: 1;
+        }
+        margin-bottom: 1;
+                
+        &:last-child {
+            margin: 0 0 0 0;             
+        }
+        .heading .title {
+            color: $primary;
+            text-style: none;
+        }         
+    
+    }
+
+
+    .title {
+        margin: 0;        
         padding: 0 0 0 1;
         text-style: bold;
     }
-    Label.help {
+    .help {
         color: $text-muted;        
         padding: 0 0 0 1;
     }
@@ -104,7 +154,7 @@ SettingsScreen {
 Welcome {
     # height: 100%;
     height: auto;
-    min-height: 100%;    
+    
 
     #logo {
         color: $text-success;        
