@@ -71,14 +71,6 @@ class Shell:
         termios.tcsetattr(slave, termios.TCSANOW, attrs)
 
         env = os.environ.copy()
-        env["PS1"] = ""
-        env["PS2"] = ""
-        env["PS3"] = ""
-        env["PS4"] = ""
-        env["RPS1"] = ""
-        env["RPS2"] = ""
-        env["PROMPT"] = ""
-        env["RPROMPT"] = ""
         shell = f"{self.shell} +o interactive"
         process = await asyncio.create_subprocess_shell(
             shell,
@@ -108,26 +100,18 @@ class Shell:
 
         unicode_decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         try:
-            while True:
-                try:
-                    # Read with timeout
-                    data = await asyncio.wait_for(reader.read(1024 * 16), timeout=None)
-                except asyncio.TimeoutError:
-                    # Check if process is still running
-                    if process.returncode is not None:
-                        break
-                if not data:
-                    break
+            while data := await reader.read(1024 * 16):
                 line = unicode_decoder.decode(data)
-                ansi_log = self.ansi_log
-                if ansi_log is None:
-                    ansi_log = self.ansi_log = await self.conversation.get_ansi_log()
-                ansi_log.write(line)
+                if self.ansi_log is None:
+                    self.ansi_log = await self.conversation.get_ansi_log()
+                self.ansi_log.write(line)
         finally:
             transport.close()
 
         line = unicode_decoder.decode(b"", final=True)
-        if line and self.ansi_log is not None:
+        if line:
+            if self.ansi_log is None:
+                self.ansi_log = await self.conversation.get_ansi_log()
             self.ansi_log.write(line)
 
         await process.wait()

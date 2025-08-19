@@ -73,7 +73,7 @@ class ANSILog(ScrollView, can_focus=False):
         self._folded_lines: list[LineFold] = []
 
         # Cache of segments
-        self._render_line_cache: LRUCache[tuple, Strip] = LRUCache(1000)
+        self._render_line_cache: LRUCache[tuple, Strip] = LRUCache(1000 * 4)
 
         # ANSI stream
         self._ansi_stream = ANSIStream()
@@ -187,11 +187,14 @@ class ANSILog(ScrollView, can_focus=False):
                         line.content[end_replace + 1 :],
                     )
                 else:
-                    updated_line = Content.assemble(
-                        line.content[:cursor_line_offset],
-                        content,
-                        line.content[cursor_line_offset + len(content) :],
-                    )
+                    if cursor_line_offset == len(line.content):
+                        updated_line = line.content + content
+                    else:
+                        updated_line = Content.assemble(
+                            line.content[:cursor_line_offset],
+                            content,
+                            line.content[cursor_line_offset + len(content) :],
+                        )
 
                 self.update_line(folded_line.line_no, updated_line)
 
@@ -212,6 +215,8 @@ class ANSILog(ScrollView, can_focus=False):
         if not width:
             return [LineFold(0, 0, 0, line)]
         line_length = line.cell_length
+        if line_length <= width:
+            return [LineFold(line_no, 0, 0, line)]
         divide_offsets = list(range(width, line_length, width))
         folded_line = line.divide(divide_offsets)
         offsets = [0, *divide_offsets]
@@ -254,7 +259,6 @@ class ANSILog(ScrollView, can_focus=False):
         self._update_virtual_size()
 
     def update_line(self, line_index: int, line: Content) -> None:
-        line.simplify()
         while line_index >= len(self._lines):
             self.add_line(Content())
 
@@ -278,9 +282,8 @@ class ANSILog(ScrollView, can_focus=False):
                 self._folded_lines.append(fold)
                 refresh_lines += 1
 
-        width = self._width
         self._update_virtual_size()
-        self.refresh(Region(0, line_no, width, refresh_lines))
+        self.refresh(Region(0, line_no, self._width, refresh_lines))
 
     def render_line(self, y: int) -> Strip:
         scroll_x, scroll_y = self.scroll_offset
@@ -358,13 +361,13 @@ if __name__ == "__main__":
         async def on_mount(self) -> None:
             ansi_log = self.query_one(ANSILog)
             env = os.environ.copy()
-            env["LINES"] = "24"
+            env["LINES"] = "50"
             env["COLUMNS"] = str(self.size.width - 2)
             env["TTY_COMPATIBLE"] = "1"
             env["FORCE_COLOR"] = "1"
 
             process = await asyncio.create_subprocess_shell(
-                "python -m rich.progress",
+                "python -m rich.palette",
                 # "python ansi_mandel.py",
                 # "python simple_test.py",
                 stdout=asyncio.subprocess.PIPE,

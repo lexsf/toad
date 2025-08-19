@@ -589,7 +589,7 @@ class Conversation(containers.Vertical):
             self.shell.send,
             command,
             self.scrollable_content_region.width - 5,
-            self.scrollable_content_region.height - 2,
+            self.window.scrollable_content_region.height - 2,
         )
 
     def action_cursor_up(self) -> None:
