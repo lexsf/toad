@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import re
 from typing import Sequence
 
 from rich.text import Text
@@ -7,10 +8,55 @@ from rich.text import Text
 from textual import on
 from textual.reactive import reactive
 from textual.content import Content
-from textual.highlight import highlight
+from textual.highlight import highlight, HighlightTheme, TokenType
 from textual.message import Message
 from textual.widgets import TextArea
 from textual.widgets.text_area import Selection
+
+from pygments.token import Token
+
+
+RE_MATCH_FILE_PROMPT = re.compile(r"(@\S+)|@\"(.*)\"")
+
+
+class TextualHighlightTheme(HighlightTheme):
+    """Contains the style definition for user with the highlight method."""
+
+    STYLES: dict[TokenType, str] = {
+        Token.Comment: "$text 60%",
+        Token.Error: "$text-error on $error-muted",
+        Token.Generic.Strong: "bold",
+        Token.Generic.Emph: "italic",
+        Token.Generic.Error: "$text-error on $error-muted",
+        Token.Generic.Heading: "$text-primary underline",
+        Token.Generic.Subheading: "$text-primary",
+        Token.Keyword: "$text-accent",
+        Token.Keyword.Constant: "bold $text-success 80%",
+        Token.Keyword.Namespace: "$text-error",
+        Token.Keyword.Type: "bold",
+        Token.Literal.Number: "$text-warning",
+        Token.Literal.String.Backtick: "$text 60%",
+        Token.Literal.String: "$text-success 90%",
+        Token.Literal.String.Doc: "$text-success 80% italic",
+        Token.Literal.String.Double: "$text-success 90%",
+        Token.Name: "$text-primary",
+        Token.Name.Attribute: "$text-warning",
+        Token.Name.Builtin: "$text-accent",
+        Token.Name.Builtin.Pseudo: "italic",
+        Token.Name.Class: "$text-warning bold",
+        Token.Name.Constant: "$text-error",
+        Token.Name.Decorator: "$text-primary bold",
+        Token.Name.Entity: "$text",
+        Token.Name.Function: "$text-warning underline",
+        Token.Name.Function.Magic: "$text-warning underline",
+        Token.Name.Tag: "$text-primary bold",
+        Token.Name.Variable: "$text-secondary",
+        Token.Number: "$text-warning",
+        Token.Operator: "bold",
+        Token.Operator.Word: "bold $text-error",
+        Token.String: "$text-success",
+        Token.Whitespace: "",
+    }
 
 
 class HighlightedTextArea(TextArea):
@@ -30,6 +76,8 @@ class HighlightedTextArea(TextArea):
         disabled: bool = False,
         placeholder: str | Content = "",
     ):
+        self._text_cache: dict[int, Text] = {}
+        self._highlight_lines: list[Content] | None = None
         super().__init__(
             text,
             name=name,
@@ -40,8 +88,6 @@ class HighlightedTextArea(TextArea):
             placeholder=placeholder,
         )
         self.compact = True
-        self._highlight_lines: list[Content] | None = None
-        self._text_cache: dict[int, Text] = {}
 
     def _clear_caches(self) -> None:
         self._highlight_lines = None
@@ -62,7 +108,14 @@ class HighlightedTextArea(TextArea):
         if self._highlight_lines is None:
             language = self.highlight_language
             if language == "markdown":
-                content = highlight(self.text + "\n```", language="markdown")
+                content = highlight(
+                    self.text + "\n```",
+                    language="markdown",
+                    theme=TextualHighlightTheme,
+                )
+                content = content.highlight_regex(
+                    RE_MATCH_FILE_PROMPT, style="$primary"
+                )
                 content_lines = content.split("\n", allow_blank=True)[:-1]
                 self._highlight_lines = content_lines
             elif language == "shell":

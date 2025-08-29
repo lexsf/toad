@@ -122,7 +122,7 @@ class PathSearch(containers.VerticalGroup):
         self.action_submit()
 
     def action_submit(self):
-        if highlighted := self.option_list.highlighted:
+        if (highlighted := self.option_list.highlighted) is not None:
             option = self.option_list.options[highlighted]
             if option.id:
                 self.post_message(InsertPath(option.id))

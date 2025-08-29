@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from rich.cells import cell_len
 
-from pathlib import Path
+from typing import Iterable
+import re
+
+from rich.cells import cell_len
 
 from textual import on, work
 from textual.reactive import var
@@ -17,6 +19,7 @@ from textual.widgets import OptionList, TextArea, Label
 from textual import containers
 from textual.widget import Widget
 from textual.widgets.option_list import Option
+from textual.widgets.text_area import Selection
 from textual import events
 
 
@@ -28,8 +31,29 @@ from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
 
 
+RE_MATCH_FILE_PROMPT = re.compile(r"(@\S+)|@\"(.*)\"")
+
+
 class AutoCompleteOptions(OptionList, can_focus=False):
     pass
+
+
+class InvokeFileSearch(Message):
+    pass
+
+
+def scan_files(prompt: str) -> Iterable[tuple[str, int, int]]:
+    """Find file syntax in prompts.
+
+    Args:
+        prompt: A line of prompt.
+
+    Yields:
+        A tuple of (PATH, START, END).
+    """
+    for match in RE_MATCH_FILE_PROMPT.finditer(prompt):
+        path, quoted_path = match.groups()
+        yield (path or quoted_path, match.start(0), match.end(0))
 
 
 class PromptTextArea(HighlightedTextArea):
@@ -95,6 +119,32 @@ class PromptTextArea(HighlightedTextArea):
             self.post_message(self.CancelShell())
             return
         return super().action_delete_left()
+
+    @on(TextArea.Changed)
+    def on_changed(self, event: TextArea.Changed) -> None:
+        selection = self.selection
+        if selection.start == selection.end:
+            y, x = selection.end
+            line = self.document.get_line(y)
+            if x > 1 and x <= len(line) and line[x - 1 :].startswith("@"):
+                remaining_line = line[x:]
+                if not remaining_line or remaining_line[0].isspace():
+                    self.post_message(InvokeFileSearch())
+
+    def watch_selection(
+        self, previous_selection: Selection, selection: Selection
+    ) -> None:
+        if selection.start == selection.end:
+            y, x = selection.end
+            line = self.document.get_line(y)
+            for path, start, end in scan_files(line):
+                if x > start and x < end:
+                    self.selection = Selection((y, start), (y, end))
+                    break
+            if x < len(line) and line[x] == "@":
+                remaining_line = line[x + 1 :]
+                if not remaining_line or remaining_line[0].isspace():
+                    self.post_message(InvokeFileSearch())
 
 
 class Prompt(containers.VerticalGroup):
@@ -287,12 +337,11 @@ class Prompt(containers.VerticalGroup):
     def on_cancel_shell(self, event: PromptTextArea.CancelShell):
         self.shell_mode = False
 
-    @on(TextArea.UserInsert)
-    async def on_text_area_user_insert(self, event: TextArea.UserInsert) -> None:
+    @on(InvokeFileSearch)
+    def on_invoke_file_search(self, event: InvokeFileSearch) -> None:
         event.stop()
-        if event.text == "@":
-            self.show_path_search = True
-            self.path_search.load_paths(self.current_directory.path)
+        self.show_path_search = True
+        self.path_search.load_paths(self.current_directory.path)
 
     @on(messages.PromptSuggestion)
     def on_prompt_suggestion(self, event: messages.PromptSuggestion) -> None:
@@ -309,7 +358,15 @@ class Prompt(containers.VerticalGroup):
     @on(messages.InsertPath)
     def on_insert_path(self, event: messages.InsertPath) -> None:
         event.stop()
-        path = f'"{event.path}"' if " " in event.path else event.path
+        if " " in event.path:
+            path = f'"{event.path}"'
+        else:
+            path = event.path
+            if (
+                self.prompt_text_area.get_text_range(*self.prompt_text_area.selection)
+                != " "
+            ):
+                path += " "
         self.prompt_text_area.insert(path)
 
     def suggest(self, suggestion: str) -> None:
