@@ -126,7 +126,7 @@ class PromptTextArea(HighlightedTextArea):
         if selection.start == selection.end:
             y, x = selection.end
             line = self.document.get_line(y)
-            if x > 1 and x <= len(line) and line[x - 1 :].startswith("@"):
+            if x and x <= len(line) and line[x - 1 :].startswith("@"):
                 remaining_line = line[x:]
                 if not remaining_line or remaining_line[0].isspace():
                     self.post_message(InvokeFileSearch())
@@ -137,7 +137,7 @@ class PromptTextArea(HighlightedTextArea):
         if selection.start == selection.end:
             y, x = selection.end
             line = self.document.get_line(y)
-            for path, start, end in scan_files(line):
+            for _path, start, end in scan_files(line):
                 if x > start and x < end:
                     self.selection = Selection((y, start), (y, end))
                     break
@@ -416,12 +416,12 @@ class Prompt(containers.VerticalGroup):
         self.auto_complete.visible = True
 
     def compose(self) -> ComposeResult:
+        yield PathSearch()
         with containers.HorizontalGroup(id="prompt-container"):
             yield Label(self.PROMPT_AI, id="prompt")
             yield PromptTextArea().data_bind(
                 Prompt.auto_completes, Prompt.multi_line, Prompt.shell_mode
             )
-        yield PathSearch()
         with containers.HorizontalGroup(id="info-container"):
             yield CondensedPath()
 

@@ -292,12 +292,6 @@ Prompt {
         }
     }
 
-    # PathSearch {        
-    #     height: auto;
-    #     OptionList {
-    #         height: 10;
-    #     }        
-    # }
     &.-show-path-search {
         PathSearch {
             display: block
