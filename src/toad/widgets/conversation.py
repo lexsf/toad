@@ -22,6 +22,7 @@ from textual.layouts.grid import GridLayout
 import llm
 
 from toad import messages
+from toad.app import ToadApp
 from toad.widgets.menu import Menu
 from toad.widgets.prompt import HighlightedTextArea, Prompt
 from toad.widgets.throbber import Throbber
@@ -34,7 +35,6 @@ from toad.block_protocol import BlockProtocol
 from toad.menus import CONVERSATION_MENUS
 
 if TYPE_CHECKING:
-    from toad.app import ToadApp
     from toad.widgets.ansi_log import ANSILog
 
 MD = """\
@@ -393,6 +393,7 @@ class Conversation(containers.Vertical):
 
     busy_count = var(0)
     cursor_offset = var(-1, init=False)
+    project_path = var(Path("./").expanduser().absolute())
     _blocks: var[list[MarkdownBlock] | None] = var(None)
 
     throbber: getters.query_one[Throbber] = getters.query_one("#throbber")
@@ -400,7 +401,7 @@ class Conversation(containers.Vertical):
     window = getters.query_one(Window)
     cursor = getters.query_one(Cursor)
     prompt = getters.query_one(Prompt)
-    app: ToadApp
+    app = getters.app(ToadApp)
 
     def create_shell(self) -> Shell:
         return Shell(self)
@@ -414,7 +415,7 @@ class Conversation(containers.Vertical):
                 with containers.VerticalGroup(id="cursor-container"):
                     yield Cursor()
                 yield Contents(id="contents")
-        yield Prompt()
+        yield Prompt().data_bind(project_path=Conversation.project_path)
 
     @cached_property
     def conversation(self) -> llm.Conversation:
@@ -473,7 +474,10 @@ class Conversation(containers.Vertical):
             await self.post(UserInput(event.body))
             agent_response = AgentResponse(self.conversation)
             await self.post(agent_response)
-            agent_response.send_prompt(event.body)
+            agent_response.send_prompt(
+                event.body,
+                Path(self.prompt.current_directory.path).expanduser().absolute(),
+            )
 
     @on(Menu.OptionSelected)
     async def on_menu_option_selected(self, event: Menu.OptionSelected) -> None:
@@ -512,6 +516,9 @@ class Conversation(containers.Vertical):
             SlashCommand("/about", "About Toad"),
             SlashCommand("/help", "Open Help"),
             SlashCommand("/set", "Change a setting"),
+            SlashCommand("/foo", "Change a setting"),
+            SlashCommand("/bar", "Change a setting"),
+            SlashCommand("/baz", "Change a setting"),
         ]
         self.call_after_refresh(self.post_welcome)
         self.app.settings_changed_signal.subscribe(self, self._settings_changed)
@@ -526,11 +533,11 @@ class Conversation(containers.Vertical):
         if key == "llm.model":
             self.conversation = llm.get_model(value).conversation()
 
+    @work
     async def post_welcome(self) -> None:
-        return
-        from toad.widgets.welcome import Welcome
+        # from toad.widgets.welcome import Welcome
 
-        await self.post(Welcome(classes="note", name="welcome"), anchor=False)
+        # await self.post(Welcome(classes="note", name="welcome"), anchor=False)
         await self.post(
             Static(
                 f"Settings read from [$text-success]'{self.app.settings_path}'",
@@ -545,11 +552,11 @@ class Conversation(containers.Vertical):
             Markdown(notes_path.read_text(), name="read_text", classes="note")
         )
 
-        from toad.widgets.agent_response import AgentResponse
+        # from toad.widgets.agent_response import AgentResponse
 
-        agent_response = AgentResponse(self.conversation)
-        await self.post(agent_response)
-        agent_response.update(MD)
+        # agent_response = AgentResponse(self.conversation)
+        # await self.post(agent_response)
+        # agent_response.update(MD)
 
     def on_click(self, event: events.Click) -> None:
         widget = event.widget

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from typing import Iterable
-import re
+from pathlib import Path
 
 from rich.cells import cell_len
 
@@ -13,6 +12,7 @@ from textual.actions import SkipAction
 from textual.binding import Binding
 
 from textual.content import Content
+from textual.geometry import Offset
 from textual import getters
 from textual.message import Message
 from textual.widgets import OptionList, TextArea, Label
@@ -29,31 +29,18 @@ from toad.widgets.condensed_path import CondensedPath
 from toad.widgets.path_search import PathSearch
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
-
-
-RE_MATCH_FILE_PROMPT = re.compile(r"(@\S+)|@\"(.*)\"")
+from toad.prompt_tools import extract_paths_from_prompt
 
 
 class AutoCompleteOptions(OptionList, can_focus=False):
-    pass
+    """A list of auto complete options (slash commands)."""
+
+    def watch_highlighted(self, highlighted: int | None) -> None:
+        super().watch_highlighted(highlighted)
 
 
 class InvokeFileSearch(Message):
     pass
-
-
-def scan_files(prompt: str) -> Iterable[tuple[str, int, int]]:
-    """Find file syntax in prompts.
-
-    Args:
-        prompt: A line of prompt.
-
-    Yields:
-        A tuple of (PATH, START, END).
-    """
-    for match in RE_MATCH_FILE_PROMPT.finditer(prompt):
-        path, quoted_path = match.groups()
-        yield (path or quoted_path, match.start(0), match.end(0))
 
 
 class PromptTextArea(HighlightedTextArea):
@@ -80,6 +67,17 @@ class PromptTextArea(HighlightedTextArea):
     def on_mount(self) -> None:
         self.highlight_cursor_line = False
         self.hide_suggestion_on_blur = False
+
+    def update_suggestion(self) -> None:
+        if self.selection.start == self.selection.end and self.text.startswith("/"):
+            prompt = self.query_ancestor(Prompt)
+            cursor_row, cursor_column = prompt.prompt_text_area.selection.end
+            line = prompt.prompt_text_area.document.get_line(cursor_row)
+            post_cursor = line[cursor_column:]
+            pre_cursor = line[:cursor_column]
+            prompt.load_suggestions(pre_cursor, post_cursor)
+        else:
+            self.query_ancestor(Prompt).show_auto_complete(False)
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "newline" and self.multi_line:
@@ -120,28 +118,26 @@ class PromptTextArea(HighlightedTextArea):
             return
         return super().action_delete_left()
 
-    @on(TextArea.Changed)
-    def on_changed(self, event: TextArea.Changed) -> None:
-        selection = self.selection
-        if selection.start == selection.end:
-            y, x = selection.end
-            line = self.document.get_line(y)
-            if x and x <= len(line) and line[x - 1 :].startswith("@"):
-                remaining_line = line[x:]
-                if not remaining_line or remaining_line[0].isspace():
-                    self.post_message(InvokeFileSearch())
-
     def watch_selection(
         self, previous_selection: Selection, selection: Selection
     ) -> None:
         if selection.start == selection.end:
+            previous_y, previous_x = previous_selection.end
             y, x = selection.end
+            if y == previous_y:
+                direction = -1 if x < previous_x else +1
+            else:
+                direction = 0
             line = self.document.get_line(y)
-            for _path, start, end in scan_files(line):
+            for _path, start, end in extract_paths_from_prompt(line):
                 if x > start and x < end:
                     self.selection = Selection((y, start), (y, end))
                     break
-            if x < len(line) and line[x] == "@":
+                if direction == -1 and x == end:
+                    self.selection = Selection((y, start), (y, end))
+                    break
+
+            if x > 0 and x <= len(line) and line[x - 1] == "@" and direction > 0:
                 remaining_line = line[x + 1 :]
                 if not remaining_line or remaining_line[0].isspace():
                     self.post_message(InvokeFileSearch())
@@ -165,6 +161,7 @@ class Prompt(containers.VerticalGroup):
     shell_mode = var(False)
     multi_line = var(False)
     show_path_search = var(False, toggle_class="-show-path-search")
+    project_path = var(Path("~/").expanduser().absolute())
 
     @dataclass
     class AutoCompleteMove(Message):
@@ -194,11 +191,12 @@ class Prompt(containers.VerticalGroup):
         self.update_prompt()
 
     def update_prompt(self):
+        """Update the prompt according to the current mode."""
         if self.shell_mode:
             self.prompt_label.update(self.PROMPT_SHELL, layout=False)
             self.add_class("-shell-mode")
             self.prompt_text_area.placeholder = Content.from_markup(
-                "Enter shell command\t[r] esc [/r] prompt mode"
+                "Enter shell command\t[r]▌esc▐[/r] prompt mode"
             ).expand_tabs(8)
             self.prompt_text_area.highlight_language = "shell"
         else:
@@ -209,11 +207,11 @@ class Prompt(containers.VerticalGroup):
             self.remove_class("-shell-mode")
             self.prompt_text_area.placeholder = Content.assemble(
                 "What would you like to do?\t".expandtabs(8),
-                ("!", "r"),
+                ("▌!▐", "r"),
                 " shell ",
-                ("/", "r"),
+                ("▌/▐", "r"),
                 " commands ",
-                ("@", "r"),
+                ("▌@▐", "r"),
                 " files",
             )
             self.prompt_text_area.highlight_language = "markdown"
@@ -254,6 +252,10 @@ class Prompt(containers.VerticalGroup):
         if auto_complete:
             self.auto_complete.set_options(auto_complete)
             self.auto_complete.action_cursor_down()
+            if (
+                highlighted_option := self.auto_complete.highlighted_option
+            ) is not None and highlighted_option.id:
+                self.suggest(highlighted_option.id)
             self.show_auto_complete(True)
         else:
             self.auto_complete.clear_options()
@@ -276,11 +278,11 @@ class Prompt(containers.VerticalGroup):
             self.prompt_text_area.suggestion = ""
             return
 
-        cursor_row, cursor_column = self.prompt_text_area.selection.end
-        line = self.prompt_text_area.document.get_line(cursor_row)
-        post_cursor = line[cursor_column:]
-        pre_cursor = line[:cursor_column]
-        self.load_suggestions(pre_cursor, post_cursor)
+        # cursor_row, cursor_column = self.prompt_text_area.selection.end
+        # line = self.prompt_text_area.document.get_line(cursor_row)
+        # post_cursor = line[cursor_column:]
+        # pre_cursor = line[:cursor_column]
+        # self.load_suggestions(pre_cursor, post_cursor)
 
     # def on_mount(self, event: events.Mount) -> None:
     #     self.call_after_refresh(self.path_search.load_paths, Path("./"))
@@ -300,8 +302,8 @@ class Prompt(containers.VerticalGroup):
 
     def update_auto_complete_location(self):
         if self.auto_complete.display:
-            cursor_offset = self.prompt_text_area.cursor_screen_offset + (-2, 1)
-            self.auto_complete.styles.offset = cursor_offset
+            cursor_offset = (self.prompt_text_area.cursor_screen_offset) + (-2, 0)
+            self.auto_complete.absolute_offset = cursor_offset
 
     @on(TextArea.Changed)
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
@@ -341,7 +343,7 @@ class Prompt(containers.VerticalGroup):
     def on_invoke_file_search(self, event: InvokeFileSearch) -> None:
         event.stop()
         self.show_path_search = True
-        self.path_search.load_paths(self.current_directory.path)
+        self.path_search.load_paths()
 
     @on(messages.PromptSuggestion)
     def on_prompt_suggestion(self, event: messages.PromptSuggestion) -> None:
@@ -373,8 +375,7 @@ class Prompt(containers.VerticalGroup):
         if suggestion.startswith(self.text) and self.text != suggestion:
             self.prompt_text_area.suggestion = suggestion[len(self.text) :]
 
-    @work(exclusive=True)
-    async def load_suggestions(self, pre_cursor: str, post_cursor: str) -> None:
+    def load_suggestions(self, pre_cursor: str, post_cursor: str) -> None:
         if post_cursor:
             self.set_auto_completes(None)
             return
@@ -416,7 +417,8 @@ class Prompt(containers.VerticalGroup):
         self.auto_complete.visible = True
 
     def compose(self) -> ComposeResult:
-        yield PathSearch()
+        yield AutoCompleteOptions()
+        yield PathSearch().data_bind(root=Prompt.project_path)
         with containers.HorizontalGroup(id="prompt-container"):
             yield Label(self.PROMPT_AI, id="prompt")
             yield PromptTextArea().data_bind(

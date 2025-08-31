@@ -8,7 +8,6 @@ from textual.widgets import Footer, OptionList, DirectoryTree
 from textual import containers
 
 
-from toad.widgets.prompt import AutoCompleteOptions
 from toad.widgets.throbber import Throbber
 from toad.widgets.conversation import Conversation
 from toad.widgets.explain import Explain
@@ -36,7 +35,6 @@ class MainScreen(Screen, can_focus=False):
 
     def compose(self) -> ComposeResult:
         yield Version("Toad v0.1")
-        yield AutoCompleteOptions()
 
         with containers.Center():
             yield DirectoryTree("./")

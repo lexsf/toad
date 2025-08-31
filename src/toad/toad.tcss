@@ -56,7 +56,7 @@ Conversation {
     }
     
     .note {
-        padding: 0 1;
+        padding: 0 1 0 0;
     }
 
     Contents {
@@ -259,8 +259,7 @@ Welcome {
 }
 
 Prompt {
-    
-    
+            
     padding: 0 0 0 0;
     # max-height: 50%;
     # background: $background;
@@ -330,8 +329,8 @@ Prompt {
         }
     }
     
-    #info-container {        
-        height: auto;
+    #info-container {                
+        height: auto;        
         CondensedPath {            
             margin: 1 1;
             width: 1fr;
@@ -344,17 +343,20 @@ Prompt {
 
 }
 
-AutoCompleteOptions {
+AutoCompleteOptions {    
+    max-height: 100vh;
     border: none;
     padding: 0;
     width: auto;
     overlay: screen;
     overflow: hidden;
     constrain: inside inflect;
+    # layer: screen;
+    # position: absolute;
     
     min-width: 12;    
     margin: 1 0;
-    height: auto;
+    height: auto;    
         
     & > .option-list--option {
         padding: 0 1;
@@ -367,6 +369,8 @@ MainScreen {
     
     # align: center top;
     background: $background;
+
+    layers: screen base;
 
     DirectoryTree {
         border: tall transparent;

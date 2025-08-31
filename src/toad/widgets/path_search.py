@@ -93,6 +93,7 @@ class PathSearch(containers.VerticalGroup):
                 for score, offsets, path in scores
             ]
         )
+        self.option_list.highlighted = 0
         self.post_message(PromptSuggestion(""))
 
     def action_cursor_down(self) -> None:
@@ -132,13 +133,10 @@ class PathSearch(containers.VerticalGroup):
         pass
 
     @work(exclusive=True)
-    async def load_paths(self, root_path: str | Path) -> None:
+    async def load_paths(self) -> None:
         self.input.clear()
         self.input.focus()
-        if isinstance(root_path, str):
-            root = Path(root_path)
-        else:
-            root = root_path
+        root = self.root
 
         self.loading = True
         paths = await directory.scan(root, exclude_dirs=[".*", "__*__"])
@@ -162,10 +160,9 @@ class PathSearch(containers.VerticalGroup):
 
     def watch_paths(self, paths: list[Path]) -> None:
         self.option_list.highlighted = None
-        cwd = Path("~/").expanduser().resolve()
 
         self.highlighted_paths = [
-            self.highlight_path(str(path.relative_to(cwd))) for path in paths
+            self.highlight_path(str(path.relative_to(self.root))) for path in paths
         ]
         self.option_list.set_options(
             [
@@ -173,5 +170,6 @@ class PathSearch(containers.VerticalGroup):
                 for highlighted_path in self.highlighted_paths
             ],
         )
+        self.option_list.highlighted = 0
         self.post_message(PromptSuggestion(""))
         self.input.focus()

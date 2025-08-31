@@ -1,11 +1,15 @@
-from llm import Conversation
+from pathlib import Path
+from llm import Conversation, Attachment
 
 from textual.reactive import var
 from textual import work
 from textual.widget import Widget
 from textual.widgets import Markdown
 from textual.widgets.markdown import MarkdownStream
+
 from toad import messages
+
+from toad.prompt_tools import extract_paths_from_prompt
 
 SYSTEM = """\
 If asked to output code add inline documentation in the google style format, and always use type hinting where appropriate.
@@ -71,20 +75,34 @@ class AgentResponse(Markdown):
         await stream.write(fragment)
 
     @work
-    async def send_prompt(self, prompt: str) -> None:
+    async def send_prompt(self, prompt: str, project_path: Path) -> None:
         stream = Markdown.get_stream(self)
         try:
-            await self._send_prompt(stream, prompt).wait()
+            await self._send_prompt(stream, prompt, project_path).wait()
         finally:
             await stream.stop()
 
     @work(thread=True)
-    def _send_prompt(self, stream: MarkdownStream, prompt: str) -> None:
+    def _send_prompt(
+        self, stream: MarkdownStream, prompt: str, project_path: Path
+    ) -> None:
         """Get the response in a thread."""
+
+        # attachments = [
+        #     Attachment(
+        #         path=str(project_path / path[1:]),
+        #         type="text",
+        #     )
+        #     for path, _, _ in extract_paths_from_prompt(prompt)
+        # ]
+
+        attachments = []
 
         self.post_message(messages.WorkStarted())
         try:
-            llm_response = self.conversation.prompt(prompt, system=SYSTEM)
+            llm_response = self.conversation.prompt(
+                prompt, system=SYSTEM, attachments=attachments
+            )
             for chunk in llm_response:
                 self.app.call_from_thread(self.append_fragment, stream, chunk)
         finally:

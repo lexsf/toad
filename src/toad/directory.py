@@ -59,7 +59,10 @@ class ScanJob:
             queue.task_done()
 
     def _scan(self, root: Path) -> list[Path]:
-        return list(root.iterdir())
+        try:
+            return list(root.iterdir())
+        except IOError:
+            return []
 
 
 async def scan(

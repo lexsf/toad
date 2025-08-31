@@ -13,7 +13,7 @@ from textual.signal import Signal
 
 from toad.settings import Schema, Settings
 from toad.settings_schema import SCHEMA
-from toad.screens.main import MainScreen
+
 from toad import atomic
 
 
@@ -100,6 +100,8 @@ class ToadApp(App):
         self.settings.set_all()
 
     def get_default_screen(self) -> Screen:
+        from toad.screens.main import MainScreen
+
         return MainScreen().data_bind(
             column=ToadApp.column,
             column_width=ToadApp.column_width,
