@@ -137,7 +137,7 @@ class PromptTextArea(HighlightedTextArea):
                     self.selection = Selection((y, start), (y, end))
                     break
 
-            if x > 0 and x <= len(line) and line[x - 1] == "@" and direction > 0:
+            if x > 0 and x <= len(line) and line[x - 1] == "@":
                 remaining_line = line[x + 1 :]
                 if not remaining_line or remaining_line[0].isspace():
                     self.post_message(InvokeFileSearch())

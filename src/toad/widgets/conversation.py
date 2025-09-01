@@ -468,16 +468,20 @@ class Conversation(containers.Vertical):
         if event.shell:
             await self.post_shell(event.body)
             self.prompt.shell_mode = False
-        elif event.body.strip():
-            from toad.widgets.agent_response import AgentResponse
+        elif text := event.body.strip():
+            if text.startswith("/"):
+                await self.slash_command(text)
+            else:
+                from toad.widgets.agent_response import AgentResponse
 
-            await self.post(UserInput(event.body))
-            agent_response = AgentResponse(self.conversation)
-            await self.post(agent_response)
-            agent_response.send_prompt(
-                event.body,
-                Path(self.prompt.current_directory.path).expanduser().absolute(),
-            )
+                await self.post(UserInput(text))
+
+                agent_response = AgentResponse(self.conversation)
+                await self.post(agent_response)
+                agent_response.send_prompt(
+                    event.body,
+                    Path(self.prompt.current_directory.path).expanduser().absolute(),
+                )
 
     @on(Menu.OptionSelected)
     async def on_menu_option_selected(self, event: Menu.OptionSelected) -> None:
@@ -776,3 +780,11 @@ class Conversation(containers.Vertical):
             self.window.scroll_end(duration=2 / 10)
             self.cursor.follow(None)
             self.prompt.focus()
+
+    async def slash_command(self, text: str) -> None:
+        command, _, parameters = text[1:].partition(" ")
+        if command == "about":
+            from toad import about
+            from toad.widgets.note import Note
+
+            await self.post(Note(about.render()))

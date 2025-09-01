@@ -2,6 +2,8 @@ from textual.content import Content
 
 
 class SlashCommand:
+    """A record of a slash command."""
+
     def __init__(self, command: str, help: str) -> None:
         self.command = command
         self.help = help

@@ -20,6 +20,10 @@ App.-hide-footer Footer {
     display: none;
 }
 
+Note {
+    padding: 0 1 0 0;
+}
+
 Conversation {
     
     Window {
