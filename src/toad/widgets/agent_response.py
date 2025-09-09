@@ -1,5 +1,5 @@
 from pathlib import Path
-from llm import Conversation, Attachment
+from llm import Conversation
 
 from textual.reactive import var
 from textual import work
@@ -9,7 +9,6 @@ from textual.widgets.markdown import MarkdownStream
 
 from toad import messages
 
-from toad.prompt_tools import extract_paths_from_prompt
 
 SYSTEM = """\
 If asked to output code add inline documentation in the google style format, and always use type hinting where appropriate.

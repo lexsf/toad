@@ -1,6 +1,7 @@
 import re
 from typing import Iterable
 
+
 RE_MATCH_FILE_PROMPT = re.compile(r"(@\S+)|@\"(.*)\"")
 
 

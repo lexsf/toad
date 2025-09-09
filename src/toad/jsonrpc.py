@@ -30,7 +30,7 @@ def expose(name: str = "", prefix: str = ""):
     """Expose a method."""
 
     def expose_method[T: Callable](callable: T) -> T:
-        callable._jsonrpc_expose = f"{prefix}{callable.__name__ or name}"
+        callable._jsonrpc_expose = f"{prefix}{name or callable.__name__}"
         return callable
 
     return expose_method
@@ -226,7 +226,7 @@ class Server:
                     arguments[parameter_name] = value
 
         for name, parameter in method.parameters.items():
-            if issubclass(parameter.type, Server):
+            if inspect.isclass(parameter.type) and issubclass(parameter.type, Server):
                 arguments[name] = self
 
         try:
@@ -289,9 +289,9 @@ class Server:
             parameters = {
                 name: Parameter(
                     (
-                        parameter.annotation
-                        if isinstance(parameter.annotation, type)
-                        else eval(parameter.annotation)
+                        eval(parameter.annotation)
+                        if isinstance(parameter.annotation, str)
+                        else parameter.annotation
                     ),
                     (
                         NO_DEFAULT

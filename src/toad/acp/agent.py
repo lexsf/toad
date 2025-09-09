@@ -7,19 +7,21 @@ from typing import Callable
 from logging import getLogger
 
 from toad import jsonrpc
+from toad.agent import AgentBase
 from toad.acp import protocol
 from toad.acp import api
 from toad.acp.api import API
+from toad.acp.prompt import build as build_prompt
 
 log = getLogger("acp")
 
 PROTOCOL_VERSION = 1
 
 
-class Agent:
-    def __init__(self, command: str) -> None:
+class Agent(AgentBase):
+    def __init__(self, project_root: Path, command: str) -> None:
+        super().__init__(project_root)
         self.command = command
-        self.project_path = Path("./")
         self._agent_task: asyncio.Task | None = None
         self._task: asyncio.Task | None = None
         self._process: asyncio.subprocess.Process | None = None
@@ -45,6 +47,8 @@ class Agent:
         if self._process is None:
             raise RuntimeError("No process")
         stdin = self._process.stdin
+        print("SEND")
+        print(request.body)
         if stdin is not None:
             stdin.write(b"%s\n" % request.body_json)
 
@@ -55,6 +59,12 @@ class Agent:
     def greet(self, name: str) -> str:
         print("Called greet!")
         return f"Hello, {name}!"
+
+    @jsonrpc.expose("update", prefix="session/")
+    def rpc_session_update(self, sessionId: str, update: protocol.SessionUpdate):
+        print("SESSION UPDATE", sessionId)
+        print("UPDATE:")
+        print(update)
 
     async def run_agent(self) -> None:
         PIPE = asyncio.subprocess.PIPE
@@ -84,6 +94,7 @@ class Agent:
             #   B) a JSONRPC response to a previous request
             try:
                 agent_data = json.loads(line.decode("utf-8"))
+                print("IN", agent_data)
             except Exception:
                 # TODO: handle this
                 raise
@@ -101,8 +112,16 @@ class Agent:
         #     {"jsonrpc": "2.0", "method": "greet", "params": {"name": "Will"}, "id": 0}
         # )
         # print(result)
+        print("run")
         await self.acp_initialize()
         await self.acp_new_session()
+        await self.send_prompt("Hello")
+
+    async def send_prompt(self, prompt: str) -> None:
+        prompt_content_blocks = await asyncio.to_thread(
+            build_prompt, self.project_root_path, prompt
+        )
+        await self.acp_session_prompt(prompt_content_blocks)
 
     async def acp_initialize(self):
         with self.request():
@@ -122,16 +141,21 @@ class Agent:
 
     async def acp_new_session(self) -> None:
         with self.request():
-            session_new_response = api.session_new(str(self.project_path), [])
+            session_new_response = api.session_new(str(self.project_root_path), [])
         response = await session_new_response.wait()
         self.session_id = response["sessionId"]
+
+    async def acp_session_prompt(self, prompt: list[protocol.ContentBlock]) -> None:
+        with self.request():
+            api.session_prompt(prompt, self.session_id)
 
 
 if __name__ == "__main__":
     from rich import print
 
     async def run_agent():
-        agent = Agent("gemini --experimental-acp")
+        agent = Agent(Path("./"), "gemini --experimental-acp")
+        print(agent)
         agent.start()
         await agent.done_event.wait()
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from rich.cells import cell_len
 
-from textual import on, work
+from textual import on
 from textual.reactive import var
 from textual.app import ComposeResult
 
@@ -12,7 +12,6 @@ from textual.actions import SkipAction
 from textual.binding import Binding
 
 from textual.content import Content
-from textual.geometry import Offset
 from textual import getters
 from textual.message import Message
 from textual.widgets import OptionList, TextArea, Label
@@ -29,7 +28,7 @@ from toad.widgets.condensed_path import CondensedPath
 from toad.widgets.path_search import PathSearch
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
-from toad.prompt_tools import extract_paths_from_prompt
+from toad.prompt.extract import extract_paths_from_prompt
 
 
 class AutoCompleteOptions(OptionList, can_focus=False):
