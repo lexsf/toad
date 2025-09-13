@@ -90,7 +90,7 @@ class LineContent(Visual):
                             end = len(line)
                         line = line.stylize(selection_style, start, end)
                 if line.cell_length < width:
-                    line = line.extend_right(width - line.cell_length)
+                    line = line.pad_right(width - line.cell_length)
 
             line = line.stylize_before(color).stylize_before(style)
 
@@ -241,9 +241,6 @@ class DiffView(containers.VerticalGroup):
         .diff-group {
             height: auto;
             background: $foreground 4%;
-           
-           
-           
         }
     }
     """
@@ -273,6 +270,7 @@ class DiffView(containers.VerticalGroup):
         self.set_reactive(DiffView.code_before, code_before)
         self.set_reactive(DiffView.code_after, code_after)
         self._grouped_opcodes: list[list[tuple[str, int, int, int, int]]] | None = None
+        self._highlighted_code_lines: tuple[list[Content], list[Content]] | None = None
 
     @property
     def grouped_opcodes(self) -> list[list[tuple[str, int, int, int, int]]]:
@@ -284,6 +282,25 @@ class DiffView(containers.VerticalGroup):
             sequence_matcher.get_opcodes()
         return self._grouped_opcodes
 
+    @property
+    def highlighted_code_lines(self) -> tuple[list[Content], list[Content]]:
+        if self._highlighted_code_lines is None:
+            language1 = highlight.guess_language(self.code_before, self.path1)
+            language2 = highlight.guess_language(self.code_after, self.path2)
+            text_lines_a = self.code_before.splitlines()
+            text_lines_b = self.code_after.splitlines()
+
+            code_a = highlight.highlight(
+                "\n".join(text_lines_a), language=language1, path=self.path1
+            )
+            code_b = highlight.highlight(
+                "\n".join(text_lines_b), language=language2, path=self.path2
+            )
+            lines_a = code_a.split("\n")
+            lines_b = code_b.split("\n")
+            self._highlighted_code_lines = (lines_a, lines_b)
+        return self._highlighted_code_lines
+
     def compose(self) -> ComposeResult:
         if self.split:
             yield from self.compose_split()
@@ -291,27 +308,23 @@ class DiffView(containers.VerticalGroup):
             yield from self.compose_unified()
 
     def compose_unified(self) -> ComposeResult:
-        language1 = highlight.guess_language(self.code_before, self.path1)
-        language2 = highlight.guess_language(self.code_after, self.path2)
-
-        text_lines_a = self.code_before.splitlines()
-        text_lines_b = self.code_after.splitlines()
-
-        code_a = highlight.highlight(
-            "\n".join(text_lines_a), language=language1, path=self.path1
-        )
-        code_b = highlight.highlight(
-            "\n".join(text_lines_b), language=language2, path=self.path2
-        )
-        lines_a = code_a.split("\n")
-        lines_b = code_b.split("\n")
-
-        line_numbers_a: list[int | None] = []
-        line_numbers_b: list[int | None] = []
-        annotations: list[str] = []
-        code_lines: list[Content] = []
+        lines_a, lines_b = self.highlighted_code_lines
 
         for group in self.grouped_opcodes:
+            line_numbers_a: list[int | None] = []
+            line_numbers_b: list[int | None] = []
+            annotations: list[str] = []
+            code_lines: list[Content] = []
+            first, last = group[0], group[-1]
+            file1_range = _format_range_unified(first[1], last[2])
+            file2_range = _format_range_unified(first[3], last[4])
+            yield GroupHeading(
+                Content.from_markup(
+                    "@@ [$text-error]-{}[/] [$text-success]+{}[/] @@".format(
+                        file1_range, file2_range
+                    ),
+                )
+            )
             for tag, i1, i2, j1, j2 in group:
                 if tag == "equal":
                     for line_offset, line in enumerate(lines_a[i1:i2]):
@@ -333,63 +346,53 @@ class DiffView(containers.VerticalGroup):
                         line_numbers_b.append(j1 + line_offset + 1)
                         code_lines.append(line)
 
-        NUMBER_STYLES = self.NUMBER_STYLES
-        LINE_STYLES = self.LINE_STYLES
+            NUMBER_STYLES = self.NUMBER_STYLES
+            LINE_STYLES = self.LINE_STYLES
 
-        line_number_width = max(
-            len("" if line_no is None else str(line_no))
-            for line_no in (line_numbers_a + line_numbers_b)
-        )
-        with containers.HorizontalGroup():
-            yield LineAnnotations(
-                [
-                    (
-                        Content(f" {' ' * line_number_width} ")
-                        if line_no is None
-                        else Content(f" {line_no:>{line_number_width}} ")
-                    ).stylize(NUMBER_STYLES[annotation])
-                    for line_no, annotation in zip(line_numbers_a, annotations)
-                ]
+            line_number_width = max(
+                len("" if line_no is None else str(line_no))
+                for line_no in (line_numbers_a + line_numbers_b)
             )
 
-            yield LineAnnotations(
-                [
-                    (
-                        Content(f" {' ' * line_number_width} ")
-                        if line_no is None
-                        else Content(f" {line_no:>{line_number_width}} ")
-                    ).stylize(NUMBER_STYLES[annotation])
-                    for line_no, annotation in zip(line_numbers_b, annotations)
-                ]
-            )
+            with containers.HorizontalGroup(classes="diff-group"):
+                yield LineAnnotations(
+                    [
+                        (
+                            Content(f" {' ' * line_number_width} ")
+                            if line_no is None
+                            else Content(f" {line_no:>{line_number_width}} ")
+                        ).stylize(NUMBER_STYLES[annotation])
+                        for line_no, annotation in zip(line_numbers_a, annotations)
+                    ]
+                )
 
-            yield LineAnnotations(
-                [
-                    (Content(f" {annotation} "))
-                    .stylize(LINE_STYLES[annotation])
-                    .stylize("bold")
-                    for annotation in annotations
+                yield LineAnnotations(
+                    [
+                        (
+                            Content(f" {' ' * line_number_width} ")
+                            if line_no is None
+                            else Content(f" {line_no:>{line_number_width}} ")
+                        ).stylize(NUMBER_STYLES[annotation])
+                        for line_no, annotation in zip(line_numbers_b, annotations)
+                    ]
+                )
+
+                yield LineAnnotations(
+                    [
+                        (Content(f" {annotation} "))
+                        .stylize(LINE_STYLES[annotation])
+                        .stylize("bold")
+                        for annotation in annotations
+                    ]
+                )
+                code_line_styles = [
+                    LINE_STYLES[annotation] for annotation in annotations
                 ]
-            )
-            code_line_styles = [LINE_STYLES[annotation] for annotation in annotations]
-            with DiffScrollContainer():
-                yield DiffCode(LineContent(code_lines, code_line_styles))
+                with DiffScrollContainer():
+                    yield DiffCode(LineContent(code_lines, code_line_styles))
 
     def compose_split(self) -> ComposeResult:
-        language1 = highlight.guess_language(self.code_before, self.path1)
-        language2 = highlight.guess_language(self.code_after, self.path2)
-
-        text_lines_a = self.code_before.splitlines()
-        text_lines_b = self.code_after.splitlines()
-
-        lines_a = highlight.highlight(
-            "\n".join(text_lines_a), language=language1, path=self.path1
-        ).split("\n")
-        lines_b = highlight.highlight(
-            "\n".join(text_lines_b), language=language2, path=self.path2
-        ).split("\n")
-
-        line_width = max(line.cell_length for line in lines_a + lines_b)
+        lines_a, lines_b = self.highlighted_code_lines
 
         for group in self.grouped_opcodes:
             first, last = group[0], group[-1]
@@ -477,6 +480,11 @@ class DiffView(containers.VerticalGroup):
                 code_line_styles = [
                     self.LINE_STYLES[annotation] for annotation in annotations_a
                 ]
+                line_width = max(
+                    line.cell_length
+                    for line in code_lines_a + code_lines_b
+                    if line is not None
+                )
                 with DiffScrollContainer() as scroll_container_a:
                     yield DiffCode(
                         LineContent(code_lines_a, code_line_styles, width=line_width)
