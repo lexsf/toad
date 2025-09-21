@@ -1,0 +1,57 @@
+# Styles for the Permissions Screen
+
+
+PermissionsScreen { 
+   
+
+    background: $background;
+
+    #instructions {
+        background: black 10%;
+        border: tall black 10%;
+        padding: 0 2;
+        margin: 0 0 1 0;        
+    }
+
+    Vertical.top {
+        height: 1fr;        
+        background: $background;        
+        # border: thick black 30%;
+        margin: 1 2;    
+        padding: 0 0;           
+    }
+
+
+    #changes {        
+        width: 1fr;
+        height: 1fr;        
+    }
+
+    OptionList#navigator {
+        width: auto;
+        height: 1fr;
+        min-width: 20;
+        margin-bottom: 1;
+    }
+    Question {        
+        width: 1fr;
+        border: tall black 10%;
+        
+        dock: bottom;
+        height: auto;
+        
+        &:focus {
+            border: tall $primary;    
+        }
+    }
+    
+    #tool-container {
+        
+        background: $background;    
+        height: 1fr;
+        border: tall black 10%;
+        &:focus {
+            border: tall $primary;
+        }
+    }
+}

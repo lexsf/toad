@@ -10,7 +10,7 @@ from textual.widgets import Input, Select, Checkbox, Footer, Static
 from textual.compose import compose
 from textual.validation import Validator, Number
 from textual import getters
-from textual import lazy
+
 
 from toad.settings import Setting
 
@@ -27,10 +27,12 @@ class SettingsScreen(ModalScreen):
         ("escape", "dismiss", "Dismiss settings"),
         ("ctrl+s", "screen.focus('#search')", "Focus search"),
     ]
+    CSS_PATH = "settings.tcss"
 
     app: ToadApp
 
     search_input = getters.query_one("Input#search", Input)
+
     AUTO_FOCUS = "Input#search"
 
     def compose(self) -> ComposeResult:

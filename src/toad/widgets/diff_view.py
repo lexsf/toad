@@ -14,6 +14,7 @@ from textual.content import Content, Span
 from textual.geometry import Size
 from textual import highlight
 from textual import events
+
 from textual.css.styles import RulesMap
 from textual.selection import Selection
 from textual.strip import Strip
@@ -60,10 +61,9 @@ class GroupHeading(Static):
     GroupHeading {
         width: auto;
         text-opacity: 0.7;
-        text-align: left;
+        text-align: center;
         margin-top: 1;
-        padding-left: 1;
-        
+        padding-left: 1;              
     }
     """
 
@@ -88,7 +88,7 @@ class LineContent(Visual):
         selection_style = options.selection_style or Style.null()
         for y, (line, color) in enumerate(zip(self.code_lines, self.line_styles)):
             if line is None:
-                line = Content.styled("╱" * width, "$foreground 15%")
+                line = Content.styled("╲" * width, "$foreground 15%")
             else:
                 if selection is not None:
                     if span := selection.get_span(y):
@@ -191,9 +191,7 @@ class DiffCode(Static):
         min-width: 1fr;
     }
     """
-
-    def allow_select(self) -> bool:
-        return True
+    ALLOW_SELECT = True
 
     def get_selection(self, selection: Selection) -> tuple[str, str] | None:
         visual = self._render()
@@ -244,11 +242,16 @@ class DiffView(containers.VerticalGroup):
             height: auto;
             background: $foreground 4%;
         }
+        
+        border-top: wide $foreground 30%;
+        border-bottom: wide $foreground 30%;
+        border-title-align: center;
 
         .annotations { width: 1; }
         &.-with-annotations {
             .annotations { width: auto; }
         }
+        
     }
     """
 
@@ -316,7 +319,28 @@ class DiffView(containers.VerticalGroup):
         return self._grouped_opcodes
 
     @property
+    def counts(self) -> tuple[int, int]:
+        """Additions and removals."""
+        additions = 0
+        removals = 0
+        for group in self.grouped_opcodes:
+            for tag, i1, i2, j1, j2 in group:
+                if tag == "delete":
+                    removals += 1
+                elif tag == "replace":
+                    additions += 1
+                    removals += 1
+                elif tag == "insert":
+                    additions += 1
+        return additions, removals
+
+    @property
     def highlighted_code_lines(self) -> tuple[list[Content], list[Content]]:
+        """Get syntax highlighted code for both files, as a list of lines.
+
+        Returns:
+            A pair of line lists for `code_before` and `code_after`
+        """
         if self._highlighted_code_lines is None:
             language1 = highlight.guess_language(self.code_before, self.path1)
             language2 = highlight.guess_language(self.code_after, self.path2)
@@ -353,8 +377,28 @@ class DiffView(containers.VerticalGroup):
             self._highlighted_code_lines = (lines_a, lines_b)
         return self._highlighted_code_lines
 
+    def get_title(self) -> Content:
+        """Get a title for the diff view.
+
+        Returns:
+            A Content instance.
+        """
+        additions, removals = self.counts
+        title = Content.from_markup(
+            "[b]$path[/b] [b]([/b][$text-success][b]$additions[/b] $additions_label[/], [$text-error][b]$removals[/b] $removals_label[/][b])[/b]",
+            path=self.path2,
+            additions=additions,
+            removals=removals,
+            additions_label="addition" if additions == 1 else "additions",
+            removals_label="removals" if removals == 1 else "removals",
+        ).stylize_before("$text")
+        return title
+
     def compose(self) -> ComposeResult:
         """Compose either split or unified view."""
+
+        self.border_title = self.get_title()
+        # yield DiffTitle(self.path2, additions, removals)
         if self.split:
             yield from self.compose_split()
         else:
@@ -467,7 +511,7 @@ class DiffView(containers.VerticalGroup):
     def compose_split(self) -> ComposeResult:
         lines_a, lines_b = self.highlighted_code_lines
 
-        annotation_hatch = Content.styled("╱" * 3, "$foreground 20%")
+        annotation_hatch = Content.styled("╲" * 3, "$foreground 15%")
         annotation_blank = Content(" " * 3)
 
         def make_annotation(
@@ -539,7 +583,7 @@ class DiffView(containers.VerticalGroup):
             else:
                 line_number_width = 1
 
-            hatch = Content.styled("╱" * (2 + line_number_width), "$foreground 20%")
+            hatch = Content.styled("╲" * (2 + line_number_width), "$foreground 15%")
 
             def format_number(line_no: int | None, annotation: str) -> Content:
                 """Format a line number with an annotation.

@@ -6,6 +6,7 @@ import platformdirs
 
 from rich import terminal_theme
 
+from textual.binding import Binding
 from textual.reactive import var, reactive
 from textual.app import App
 from textual.screen import Screen
@@ -19,6 +20,9 @@ from toad import atomic
 
 class ToadApp(App):
     BINDING_GROUP_TITLE = "System"
+    BINDINGS = [
+        Binding("ctrl+t", "show_permissions", "Permissions screen test", priority=True)
+    ]
 
     CSS_PATH = "toad.tcss"
 
@@ -36,6 +40,11 @@ class ToadApp(App):
         self.settings_changed_signal = Signal(self, "settings_changed")
         self.acp_command = acp_command
         super().__init__()
+
+    def action_show_permissions(self) -> None:
+        from toad.screens.permissions import PermissionsScreen
+
+        self.push_screen(PermissionsScreen())
 
     @property
     def config_path(self) -> Path:

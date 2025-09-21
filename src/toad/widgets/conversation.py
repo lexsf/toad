@@ -336,7 +336,7 @@ class Cursor(Static):
         self.set_interval(0.4, self._update_follow)
 
     def _update_blink(self) -> None:
-        if self.query_ancestor(Window).has_focus:
+        if self.query_ancestor(Window).has_focus and self.screen.is_active:
             self.blink = not self.blink
         else:
             self.blink = True
