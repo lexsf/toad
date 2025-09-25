@@ -13,9 +13,10 @@ class FutureText(Static):
 
     DEFAULT_CSS = """
     FutureText {
-        width: 1fr;
+        width: auto;
         height: 1;
         text-wrap: nowrap;
+        text-align: center;
     }
     """
 
@@ -61,10 +62,16 @@ class FutureText(Static):
         text = text[: round(progress)]
 
         bar_character = self.BARS[7 - cursor_progress]
+
+        WAVE = "◐◓◑◒"
+
         text = Content.assemble(
+            # WAVE[int((speed_time / 2) % len(WAVE))],
+            # " ",
             text,
             (bar_character, "reverse $text-error"),
             (bar_character, "$text-error"),
+            " " * (len(self.text) - len(text) + 1),
         )
         self.update(text, layout=False)
 

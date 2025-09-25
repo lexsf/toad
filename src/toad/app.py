@@ -32,7 +32,7 @@ class ToadApp(App):
     def __init__(
         self, acp_command: str | None = None, project_dir: str | None = None
     ) -> None:
-        """_summary_
+        """
 
         Args:
             acp_command: Command to launch an ACP agent.
@@ -45,13 +45,8 @@ class ToadApp(App):
     def get_loading_widget(self) -> Widget:
         from toad.widgets.future_text import FutureText
 
-        TEXT = """I must not fear.
-Fear is the mind-killer.
-Fear is the little-death that brings total obliteration.
-I will face my fear.
-I will permit it to pass over me and through me.
-And when it has gone past, I will turn the inner eye to see its path.
-Where the fear has gone there will be nothing. Only I will remain."""
+        TEXT = """Thinking...
+One moment please..."""
 
         return FutureText([Content(line) for line in TEXT.splitlines()])
 
