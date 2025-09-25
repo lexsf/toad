@@ -318,13 +318,17 @@ def loop_first_last(values: Iterable[ValueType]) -> Iterable[tuple[bool, bool, V
     first = True
 
 '''
-
+    from textual import work
     from textual.app import App
 
     class PermissionTestApp(App):
+        @work
         async def on_mount(self) -> None:
-            screen = PermissionsScreen()
-            await self.push_screen(screen)
+            screen = PermissionsScreen(
+                [Answer("Foo", "foo"), Answer("Bar", "bar")], None
+            )
+            result = await self.push_screen_wait(screen)
+            self.notify(str(result))
             # for repeat in range(5):
             #     await screen.add_diff("foo.py", "foo.py", SOURCE1, SOURCE2)
 

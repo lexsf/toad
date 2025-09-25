@@ -282,8 +282,8 @@ class Question(Widget, can_focus=True):
         self._reset_blink()
         self.post_message(
             self.Answer(
-                index=self.selected,
-                answer=self.options[self.selected],
+                index=self.selection,
+                answer=self.options[self.selection],
             )
         )
         self.selected = True
