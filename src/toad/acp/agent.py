@@ -150,6 +150,14 @@ class Agent(AgentBase):
                     self.tool_calls[tool_call_id] = current_tool_call
                     message_target.post_message(messages.ToolCall(current_tool_call))
 
+            case {
+                "sessionUpdate": "available_commands_update",
+                "availableCommands": available_commands,
+            }:
+                message_target.post_message(
+                    messages.AvailableCommandsUpdate(available_commands)
+                )
+
     @jsonrpc.expose("session/request_permission")
     async def rpc_request_permission(
         self,

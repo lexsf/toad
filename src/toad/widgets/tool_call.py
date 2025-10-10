@@ -125,7 +125,7 @@ class ToolCall(containers.VerticalGroup):
                         text = Text.from_ansi(text)
                         yield TextContent(Content.from_rich_text(text))
                     else:
-                        yield TextContent(text)
+                        yield MarkdownContent(text)
 
         for content in tool_call_content:
             log(content)

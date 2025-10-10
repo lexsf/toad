@@ -58,3 +58,10 @@ class ToolCallUpdate(AgentMessage):
     def tool_id(self) -> str:
         """An id suitable for use as a TCSS ID."""
         return encode_tool_call_id(self.tool_call["toolCallId"])
+
+
+@dataclass
+class AvailableCommandsUpdate(AgentMessage):
+    """The agent is reporting its slash commands."""
+
+    commands: list[protocol.AvailableCommand]

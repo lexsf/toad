@@ -113,6 +113,10 @@ class PromptTextArea(HighlightedTextArea):
         self.insert("\n")
 
     def action_submit(self) -> None:
+        if self.suggestion:
+            self.insert(self.suggestion + " ")
+            self.suggestion = ""
+            return
         self.post_message(UserInputSubmitted(self.text, self.shell_mode))
         self.clear()
 

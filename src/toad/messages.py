@@ -16,6 +16,7 @@ class WorkFinished(Message):
 class UserInputSubmitted(Message):
     body: str
     shell: bool = False
+    auto_complete: bool = False
 
 
 @dataclass
