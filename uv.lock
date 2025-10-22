@@ -454,9 +454,6 @@ wheels = [
 linkify = [
     { name = "linkify-it-py" },
 ]
-plugins = [
-    { name = "mdit-py-plugins" },
-]
 
 [[package]]
 name = "markupsafe"
@@ -1043,7 +1040,8 @@ name = "textual"
 version = "6.3.0"
 source = { editable = "../textual" }
 dependencies = [
-    { name = "markdown-it-py", extra = ["linkify", "plugins"] },
+    { name = "markdown-it-py", extra = ["linkify"] },
+    { name = "mdit-py-plugins" },
     { name = "platformdirs" },
     { name = "pygments" },
     { name = "rich" },
@@ -1072,7 +1070,8 @@ syntax = [
 
 [package.metadata]
 requires-dist = [
-    { name = "markdown-it-py", extras = ["linkify", "plugins"], specifier = ">=2.1.0" },
+    { name = "markdown-it-py", extras = ["linkify"], specifier = ">=2.1.0" },
+    { name = "mdit-py-plugins" },
     { name = "platformdirs", specifier = ">=3.6.0,<5" },
     { name = "pygments", specifier = ">=2.19.2,<3.0.0" },
     { name = "rich", specifier = ">=14.2.0" },

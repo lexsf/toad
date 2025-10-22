@@ -8,6 +8,7 @@ from textual.color import Color
 from textual.reactive import var
 from textual.content import Content
 from textual.style import Style
+from textual.timer import Timer
 from textual.widgets import Static
 
 
@@ -44,6 +45,7 @@ class FutureText(Static):
         self.speed = speed
         self.start_time = monotonic()
         super().__init__(name=name, id=id, classes=classes)
+        self._update_timer: Timer | None = None
 
     @property
     def text(self) -> Content:
@@ -55,11 +57,10 @@ class FutureText(Static):
 
     def on_mount(self) -> None:
         self.start_time = monotonic()
-
         self.set_interval(1 / 60, self._update_text)
 
     def _update_text(self) -> None:
-        if not self.is_mounted or not self.screen.is_active:
+        if not self.is_attached or not self.screen.is_active:
             return
         text = self.text + " "
         speed_time = self.time * self.speed
