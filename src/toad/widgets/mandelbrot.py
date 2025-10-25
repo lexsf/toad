@@ -1,7 +1,4 @@
-from functools import lru_cache
 from typing import NamedTuple
-
-import math
 
 from textual import events
 from textual.color import Color
@@ -123,6 +120,20 @@ class Mandelbrot(Static):
         Returns:
             A float representing the smooth iteration count, or MAX_ITER for points in the set.
         """
+        # Early escape: check if point is in main cardioid
+        # The main cardioid can be detected with: q(q + (x - 1/4)) < 1/4 * y^2
+        # where q = (x - 1/4)^2 + y^2
+        x_shifted = c_real - 0.25
+        q = x_shifted * x_shifted + c_imag * c_imag
+        if q * (q + x_shifted) < 0.25 * c_imag * c_imag:
+            return max_iterations
+
+        # Early escape: check if point is in period-2 bulb
+        # The period-2 bulb is the circle: (x + 1)^2 + y^2 < 1/16
+        x_plus_one = c_real + 1.0
+        if x_plus_one * x_plus_one + c_imag * c_imag < 0.0625:
+            return max_iterations
+
         z_real = 0
         z_imag = 0
         for i in range(max_iterations):
@@ -147,7 +158,7 @@ class Mandelbrot(Static):
 
         self.zoom_position = event.offset
         self.zoom_scale = 0.95 if event.ctrl else 1.05
-        self.zoom_timer = self.set_interval(1 / 30, self.zoom)
+        self.zoom_timer = self.set_interval(1 / 16, self.zoom)
         self.capture_mouse()
 
     def on_mouse_up(self, event: events.Click) -> None:
@@ -162,8 +173,8 @@ class Mandelbrot(Static):
         width, height = self.content_size
         x_min, x_max, y_min, y_max = self.set_region
 
-        set_width = (x_max - x_min) * 0.9
-        set_height = (y_max - y_min) * 0.9
+        set_width = x_max - x_min
+        set_height = y_max - y_min
 
         x = x_min + (zoom_x / width) * set_width
         y = y_min + (zoom_y / height) * set_height
