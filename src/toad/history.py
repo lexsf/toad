@@ -1,13 +1,12 @@
-import rich.repr
-
 from typing import TypedDict
-
 import asyncio
-
 import json
 from pathlib import Path
-
 from time import time
+
+import rich.repr
+
+from toad.complete import Complete
 
 
 class HistoryEntry(TypedDict):
@@ -26,6 +25,7 @@ class History:
         self._lines: list[str] = []
         self._opened: bool = False
         self._current: str | None = None
+        self.complete = Complete()
 
     def __rich_repr__(self) -> rich.repr.Result:
         yield self.path
@@ -53,12 +53,21 @@ class History:
             return True
 
         def read_history() -> bool:
+            """Read the history file (in a thread).
+
+            Returns:
+                `True` on success.
+            """
             try:
                 self.path.touch(exist_ok=True)
                 with self.path.open("r") as history_file:
-                    history_file.seek(0)
                     self._lines = history_file.readlines()
-                print(self, self._lines)
+
+                inputs: list[str] = []
+                for line in self._lines:
+                    if (input := json.loads(line).get("input")) is not None:
+                        inputs.append(input.split(" ", 1)[0])
+                self.complete.add_words(inputs)
             except Exception:
                 return False
             return True
@@ -66,7 +75,7 @@ class History:
         self._opened = await asyncio.to_thread(read_history)
         return self._opened
 
-    async def append(self, input: str, shell: bool) -> bool:
+    async def append(self, input: str) -> bool:
         """Append a history entry.
 
         Args:
@@ -76,6 +85,11 @@ class History:
         Returns:
             `True` on success.
         """
+
+        if not input:
+            return True
+
+        self.complete.add_words([input])
 
         def write_line() -> bool:
             """Append a line to the history.
@@ -94,6 +108,7 @@ class History:
                     history_file.write(f"{line}\n")
             except Exception:
                 return False
+            self._current = None
             return True
 
         if not self._opened:

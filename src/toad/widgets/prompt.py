@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from pathlib import Path
-from typing import Self
+from typing import Callable, Self
 
 from textual import on
 from textual.reactive import var
@@ -122,8 +122,8 @@ class PromptTextArea(HighlightedTextArea):
             event.prevent_default()
 
     def update_suggestion(self) -> None:
+        prompt = self.query_ancestor(Prompt)
         if self.selection.start == self.selection.end and self.text.startswith("/"):
-            prompt = self.query_ancestor(Prompt)
             cursor_row, cursor_column = prompt.prompt_text_area.selection.end
             line = prompt.prompt_text_area.document.get_line(cursor_row)
             post_cursor = line[cursor_column:]
@@ -131,6 +131,11 @@ class PromptTextArea(HighlightedTextArea):
             prompt.load_suggestions(pre_cursor, post_cursor)
         else:
             self.query_ancestor(Prompt).show_auto_completes = False
+
+            if self.shell_mode and self.cursor_at_end_of_text and "\n" not in self.text:
+                if prompt.complete_callback is not None:
+                    if completes := prompt.complete_callback(self.text):
+                        self.suggestion = completes[-1]
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "newline" and self.multi_line:
@@ -278,9 +283,11 @@ class Prompt(containers.VerticalGroup):
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
+        complete_callback: Callable[[str], list[str]] | None = None,
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self.ask_queue: list[Ask] = []
+        self.complete_callback = complete_callback
 
     @property
     def text(self) -> str:
@@ -645,6 +652,9 @@ class Prompt(containers.VerticalGroup):
         return True
 
     def action_dismiss(self) -> None:
+        if self.prompt_text_area.suggestion:
+            self.prompt_text_area.suggestion = ""
+            return
         if self.shell_mode:
             self.shell_mode = False
         elif self.show_auto_completes:

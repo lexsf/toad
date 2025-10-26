@@ -241,13 +241,14 @@ class Conversation(containers.Vertical):
     def validate_prompt_history_index(self, index: int) -> int:
         return clamp(index, -self.shell_history.size, 0)
 
+    def shell_complete(self, prefix: str) -> list[str]:
+        return self.shell_history.complete(prefix)
+
     async def watch_shell_history_index(self, previous_index: int, index: int) -> None:
-        print(previous_index, index)
         if previous_index == 0:
             self.shell_history.current = self.prompt.text
         try:
             history_entry = await self.shell_history.get_entry(index)
-            self.log(history_entry)
         except IndexError:
             pass
         else:
@@ -259,7 +260,6 @@ class Conversation(containers.Vertical):
             self.prompt_history.current = self.prompt.text
         try:
             history_entry = await self.prompt_history.get_entry(index)
-            self.log(history_entry)
         except IndexError:
             pass
         else:
@@ -273,7 +273,7 @@ class Conversation(containers.Vertical):
                     yield Cursor()
                 yield Contents(id="contents")
         yield Flash()
-        yield Prompt().data_bind(
+        yield Prompt(complete_callback=self.shell_complete).data_bind(
             project_path=Conversation.project_path,
             working_directory=Conversation.working_directory,
             agent_info=Conversation.agent_info,
@@ -435,12 +435,16 @@ class Conversation(containers.Vertical):
 
     @on(messages.UserInputSubmitted)
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
+        if not event.body.strip():
+            return
         if event.shell:
-            await self.shell_history.append(event.body, event.shell)
+            await self.shell_history.append(event.body)
+            self.shell_history_index = 0
             await self.post_shell(event.body)
             self.prompt.shell_mode = False
         elif text := event.body.strip():
-            await self.prompt_history.append(event.body, event.shell)
+            await self.prompt_history.append(event.body)
+            self.prompt_history_index = 0
             if text.startswith("/"):
                 await self.slash_command(text)
             else:
@@ -721,16 +725,10 @@ class Conversation(containers.Vertical):
     @on(messages.HistoryMove)
     async def on_history_move(self, message: messages.HistoryMove) -> None:
         message.stop()
-        self.log(message)
         if message.shell or not message.body.strip():
-            print(1)
             await self.shell_history.open()
-            # print(message)
-            print(self.shell_history.size)
             self.shell_history_index += message.direction
-            print(self.shell_history_index)
         else:
-            print(2)
             await self.prompt_history.open()
             self.prompt_history_index += message.direction
 
@@ -862,6 +860,10 @@ class Conversation(containers.Vertical):
         self.app.settings_changed_signal.subscribe(self, self._settings_changed)
         # self.shell.start()
 
+        self.shell_history.complete.add_words(
+            self.app.settings.get("shell.allow_commands", expect_type=str).split()
+        )
+
         if self.app.acp_command:
 
             def start_agent():
@@ -878,6 +880,8 @@ class Conversation(containers.Vertical):
 
     def _settings_changed(self, setting_item: tuple[str, str]) -> None:
         key, value = setting_item
+        if key == "shell.allow_commands":
+            self.shell_history.complete.add_words(value.split())
         # if key == "llm.model":
         #     self.conversation = llm.get_model(value).conversation()
 
