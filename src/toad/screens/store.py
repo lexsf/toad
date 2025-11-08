@@ -1,5 +1,3 @@
-import json
-
 from importlib.metadata import version
 from importlib.resources import files
 
@@ -15,7 +13,8 @@ from textual import widgets
 from toad.pill import pill
 from toad.widgets.mandelbrot import Mandelbrot
 from toad.widgets.grid_select import GridSelect
-from toad.screens.store_schema import Agent
+from toad.agent_schema import Agent
+from toad.agents import read_agents
 
 
 QR = """\
@@ -105,9 +104,17 @@ class StoreScreen(Screen):
         webbrowser.open(url)
 
     async def update_agents_data(self, agents: list[Agent]) -> None:
+        """Mount an entry for each Agent.
+
+        Args:
+            agents: List of Agent dicts
+        """
         agents_view = self.agents_view
-        agent_items = [AgentItem(agent) for agent in agents]
-        await agents_view.mount_all(agent_items)
+        if agents:
+            agents = sorted(agents, key=lambda agent: agent["name"].casefold())
+            agent_items = [AgentItem(agent) for agent in agents]
+            await agents_view.mount_all(agent_items)
+            agents_view.highlighted = 0
         agents_view.loading = False
 
     @on(GridSelect.Selected)
@@ -117,18 +124,19 @@ class StoreScreen(Screen):
 
         self.app.push_screen(AgentModal(event.selected_widget.agent))
 
-    @work(thread=True)
-    def on_mount(self) -> None:
+    @work
+    async def on_mount(self) -> None:
+        agents: list[Agent] = []
         try:
-            data_file = files("toad.data").joinpath("agents.json")
-            with data_file.open("r", encoding="utf-8") as agents_file:
-                agents_data: list[Agent] = json.load(agents_file)
-        except Exception:
+            agents = await read_agents()
+        except Exception as error:
             self.notify(
-                "Failed to read agents data", title="Agents data", severity="error"
+                f"Failed to read agents data ({error})",
+                title="Agents data",
+                severity="error",
             )
         else:
-            self.app.call_from_thread(self.update_agents_data, agents_data)
+            await self.update_agents_data(agents)
 
 
 if __name__ == "__main__":

@@ -249,4 +249,19 @@ SCHEMA: list[SchemaDict] = [
             },
         ],
     },
+    {
+        "key": "launcher",
+        "title": "Launcher settings",
+        "help": "Customize the launcher",
+        "type": "object",
+        "editable": False,
+        "fields": [
+            {
+                "key": "agents",
+                "title": "Agents to show in the launcher",
+                "type": "text",
+                "default": "",
+            }
+        ],
+    },
 ]
