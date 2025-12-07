@@ -14,6 +14,7 @@ type = "coding"
 description = "Agent Builder and Runtime by Docker Engineering. Build, orchestrate, and share AI agents with MCP and ACP support."
 tags = []
 run_command."*" = "cagent acp"
+recommended = false
 
 help = '''
 # Docker cagent
@@ -46,6 +47,11 @@ Agent configurations can be packaged and shared using the `cagent push` command,
 **Documentation**: https://docs.docker.com/ai/cagent/  
 **GitHub**: https://github.com/docker/cagent  
 **Blog Post**: https://www.docker.com/blog/cagent-build-and-distribute-ai-agents-and-workflows/
+'''
+
+welcome = '''
+Say "hello" to CAgent!
+
 '''
 
 [actions."*".install]
