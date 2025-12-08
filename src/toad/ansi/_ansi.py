@@ -832,7 +832,9 @@ class Buffer:
     @property
     def is_blank(self) -> bool:
         """Is this buffer blank (spaces in all lines)?"""
-        return not any(line.content.plain.strip() for line in self.lines)
+        return not any(
+            (line.content.plain.strip() or line.content.spans) for line in self.lines
+        )
 
     def update_cursor(self, line_no: int, cursor_line_offset: int) -> None:
         """Move the cursor to the given unfolded line and offset.
