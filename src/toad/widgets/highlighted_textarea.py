@@ -110,8 +110,6 @@ class HighlightedTextArea(TextArea):
             text = self.text
             if text.startswith("/") and "\n" not in text:
                 content = Content.styled(text, "$text-success")
-                # content = content.stylize("$text-success", 0, len(command))
-                # content = content.stylize("dim", len(command) + 1)
                 self._highlight_lines = [content]
                 return self._highlight_lines
 

@@ -636,14 +636,6 @@ class Prompt(containers.VerticalGroup):
         if suggestion.startswith(self.text) and self.text != suggestion:
             self.prompt_text_area.suggestion = suggestion[len(self.text) :]
 
-    # @on(events.DescendantBlur, "PromptTextArea")
-    # def on_descendant_blur(self, event: events.DescendantBlur) -> None:
-    #     self.auto_complete.visible = False
-
-    # @on(events.DescendantFocus, "PromptTextArea")
-    # def on_descendant_focus(self, event: events.DescendantFocus) -> None:
-    #     self.auto_complete.visible = True
-
     def compose(self) -> ComposeResult:
         yield PathSearch().data_bind(root=Prompt.project_path)
         yield SlashComplete().data_bind(slash_commands=Prompt.slash_commands)
