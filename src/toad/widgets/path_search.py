@@ -39,6 +39,35 @@ class PathFuzzySearch(FuzzySearch):
             }
         )
 
+    def score(self, candidate: str, positions: Sequence[int]) -> float:
+        """Score a search.
+
+        Args:
+            search: Search object.
+
+        Returns:
+            Score.
+        """
+        first_letters = self.get_first_letters(candidate)
+        # This is a heuristic, and can be tweaked for better results
+        # Boost first letter matches
+        offset_count = len(positions)
+        score: float = offset_count + len(first_letters.intersection(positions))
+        if 0 in first_letters:
+            score += 1
+
+        groups = 1
+        last_offset, *offsets = positions
+        for offset in offsets:
+            if offset != last_offset + 1:
+                groups += 1
+            last_offset = offset
+
+        # Boost to favor less groups
+        normalized_groups = (offset_count - (groups - 1)) / offset_count
+        score *= 1 + (normalized_groups * normalized_groups)
+        return score
+
 
 class PathSearch(containers.VerticalGroup):
     CURSOR_BINDING_GROUP = Binding.Group(description="Move selection")
@@ -89,10 +118,10 @@ class PathSearch(containers.VerticalGroup):
         fuzzy_search.cache.grow(len(self.paths))
         scores: list[tuple[float, Sequence[int], Content]] = [
             (
-                *fuzzy_search.match(search, self.highlighted_paths[index].plain),
-                self.highlighted_paths[index],
+                *fuzzy_search.match(search, highlighted_path.plain),
+                highlighted_path,
             )
-            for index, path in enumerate(self.paths)
+            for highlighted_path in self.highlighted_paths
         ]
 
         scores = sorted(
@@ -182,7 +211,7 @@ class PathSearch(containers.VerticalGroup):
         paths = await directory.scan(root, path_spec=path_spec, add_directories=True)
 
         paths = [path.absolute() for path in paths]
-        paths.sort(key=lambda path: (len(path.parts), str(path)))
+        # paths.sort(key=lambda path: (len(path.parts), str(path).lower()))
         self.root = root
         self.paths = paths
         self.loading = False
@@ -218,9 +247,8 @@ class PathSearch(containers.VerticalGroup):
             else:
                 return str(path.relative_to(self.root))
 
-        self.highlighted_paths = [
-            self.highlight_path(path_display(path)) for path in paths
-        ]
+        display_paths = sorted(map(path_display, paths), key=str.lower)
+        self.highlighted_paths = [self.highlight_path(path) for path in display_paths]
         self.option_list.set_options(
             [
                 Option(highlighted_path, id=highlighted_path.plain)
