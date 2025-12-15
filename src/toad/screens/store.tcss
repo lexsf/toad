@@ -160,8 +160,13 @@ AgentModal {
             height: auto;
             padding: 0 0 1 1;
             max-height: 20;
-            overflow-y: auto;
-            scrollbar-gutter: stable;
+            overflow-y: auto;            
+            Markdown {                
+                padding: 0 1;
+                MarkdownH1 {
+                    margin: 1 1 1 0
+                }
+            }
         }
 
         Select {
