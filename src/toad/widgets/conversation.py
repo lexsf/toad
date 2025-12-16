@@ -208,7 +208,7 @@ class Conversation(containers.Vertical):
             priority=True,
         ),
         Binding(
-            "ctrl+m",
+            "ctrl+o",
             "mode_switcher",
             "Modes",
             tooltip="Open the mode switcher",
