@@ -235,7 +235,7 @@ def serve(port: int, host: str) -> None:
 
 @main.command("about")
 def about() -> None:
-    """Serve Toad as a web application."""
+    """Show about information."""
 
     from toad import about
 
