@@ -136,8 +136,11 @@ class PathSearch(containers.VerticalGroup):
 
         self.option_list.set_options(
             [
-                Option(highlight_offsets(path, offsets), id=path.plain)
-                for score, offsets, path in scores
+                Option(
+                    highlight_offsets(path, offsets) if index < 20 else path,
+                    id=path.plain,
+                )
+                for index, (score, offsets, path) in enumerate(scores)
             ]
         )
         self.option_list.highlighted = 0
