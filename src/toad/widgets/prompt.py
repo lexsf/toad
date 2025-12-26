@@ -599,8 +599,8 @@ class Prompt(containers.VerticalGroup):
     def watch_show_slash_complete(self, show: bool) -> None:
         self.slash_complete.focus()
 
-    def new_turn(self) -> None:
-        """Called when there is a new turn."""
+    def project_directory_updted(self) -> None:
+        """Called when there is may be new files"""
         self.path_search.refresh_paths()
 
     @on(PromptTextArea.RequestShellMode)

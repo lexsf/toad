@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import fnmatch
-from typing import Callable, Sequence
+from typing import Callable
 from time import time
 from os import PathLike
 from pathlib import Path

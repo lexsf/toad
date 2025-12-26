@@ -198,15 +198,19 @@ class PathSearch(containers.VerticalGroup):
 
     @work(exclusive=True)
     async def refresh_paths(self):
+        self.loading = True
         root = self.root
-        path_filter = await asyncio.to_thread(self.get_path_filter, root)
-        paths = await directory.scan(
-            root, path_filter=path_filter, add_directories=True
-        )
+        try:
+            path_filter = await asyncio.to_thread(self.get_path_filter, root)
+            paths = await directory.scan(
+                root, path_filter=path_filter, add_directories=True
+            )
 
-        paths = [path.absolute() for path in paths]
-        self.root = root
-        self.paths = paths
+            paths = [path.absolute() for path in paths]
+            self.root = root
+            self.paths = paths
+        finally:
+            self.loading = False
 
     def get_loading_widget(self) -> Widget:
         from textual.widgets import LoadingIndicator
