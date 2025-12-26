@@ -1,4 +1,4 @@
-import re2 as re
+import re  # re2 doesn't have MULTILINE
 from typing import Iterable
 from rich.text import Text
 
