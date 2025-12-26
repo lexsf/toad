@@ -149,6 +149,15 @@ StoreScreen {
 AgentModal {    
     align: center middle;
     # background: $surface 80%;
+
+    .acp-warning {
+        background: $success-muted 50%;
+        color: $text-success;
+        margin-left: 1;
+        padding: 0 1;
+        margin-bottom: 1;
+    }
+
     #container {
         
         margin: 2 4 1 4;
