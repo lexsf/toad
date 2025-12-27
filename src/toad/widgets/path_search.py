@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from functools import lru_cache
 from operator import itemgetter
+import os
 from pathlib import Path
 import re2 as re
 from typing import Sequence
@@ -30,6 +31,7 @@ from toad import directory
 from toad.fuzzy import FuzzySearch
 from toad.messages import Dismiss, InsertPath, PromptSuggestion
 from toad.path_filter import PathFilter
+from toad.widgets.project_directory_tree import ProjectDirectoryTree
 
 
 class PathFuzzySearch(FuzzySearch):
@@ -112,9 +114,9 @@ class PathSearch(containers.VerticalGroup):
             group=CURSOR_BINDING_GROUP,
             priority=True,
         ),
-        Binding("enter", "submit", "Insert path", priority=True),
-        Binding("escape", "dismiss", "Dismiss", priority=True),
-        Binding("tab", "switch_picker", "Switch picker", priority=True),
+        Binding("enter", "submit", "Insert path", priority=True, show=False),
+        Binding("escape", "dismiss", "Dismiss", priority=True, show=False),
+        Binding("tab", "switch_picker", "Switch picker", priority=True, show=False),
     ]
 
     def get_fuzzy_search(self) -> FuzzySearch:
@@ -131,7 +133,7 @@ class PathSearch(containers.VerticalGroup):
     tree_path = var("")
 
     option_list = getters.query_one(OptionList)
-    tree_view = getters.query_one(DirectoryTree)
+    tree_view = getters.query_one(ProjectDirectoryTree)
     input = getters.query_one(Input)
 
     def compose(self) -> ComposeResult:
@@ -145,11 +147,10 @@ class PathSearch(containers.VerticalGroup):
                 yield widgets.Static(
                     "tree view \t[r]▌tab▐[/r] fuzzy search", classes="message"
                 )
-                yield DirectoryTree(self.root)
+                yield ProjectDirectoryTree(self.root)
 
     def on_mount(self) -> None:
-        tree = self.query_one(DirectoryTree)
-        tree.show_root = False
+        tree = self.tree_view
         tree.guide_depth = 2
         tree.center_scroll = True
 
@@ -160,6 +161,7 @@ class PathSearch(containers.VerticalGroup):
         )
         if show_tree_picker:
             self.tree_view.focus()
+
         else:
             self.input.focus()
 
@@ -245,25 +247,21 @@ class PathSearch(containers.VerticalGroup):
         event.stop()
 
         dir_entry = event.node.data
-        path = dir_entry.path
-
-        path = Path(path).relative_to(self.root)
-        self.tree_path = str(path)
-
-        self.post_message(PromptSuggestion(self.tree_path))
+        if dir_entry is not None:
+            path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
+            self.tree_path = str(path)
+            self.post_message(PromptSuggestion(self.tree_path))
 
     @on(DirectoryTree.FileSelected)
     def on_file_selected(self, event: DirectoryTree.FileSelected) -> None:
         event.stop()
 
         dir_entry = event.node.data
-        path = dir_entry.path
-
-        path = Path(path).relative_to(self.root)
-        self.tree_path = str(path)
-
-        self.post_message(InsertPath(self.tree_path))
-        self.post_message(Dismiss(self))
+        if dir_entry is not None:
+            path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
+            self.tree_path = str(path)
+            self.post_message(InsertPath(self.tree_path))
+            self.post_message(Dismiss(self))
 
     @on(Input.Changed)
     async def on_input_changed(self, event: Input.Changed):
@@ -310,8 +308,12 @@ class PathSearch(containers.VerticalGroup):
     async def refresh_paths(self):
         self.loading = True
         root = self.root
+
         try:
             path_filter = await asyncio.to_thread(self.get_path_filter, root)
+            self.tree_view.path_filter = path_filter
+            self.tree_view.clear()
+            await self.tree_view.reload()
             paths = await directory.scan(
                 root, path_filter=path_filter, add_directories=True
             )
@@ -328,14 +330,22 @@ class PathSearch(containers.VerticalGroup):
         return LoadingIndicator()
 
     def highlight_path(self, path: str) -> Content:
-        content = Content.styled(path, "dim")
+        if os.path.split(path)[-1].startswith("."):
+            return Content.styled(path, "dim")
+        content = Content.styled(path, "dim $text")
+        content = content.highlight_regex("[^/]*?$", style="not dim $text-primary")
+        content = content.highlight_regex(r"\.[^/]*$", style="italic")
+        return content
+
         if path.startswith("."):
-            return content
+            return content.stylize("dim")
         if not path.endswith("/"):
             if "/" in path:
-                content = content.stylize("$text-success", path.rfind("/") + 1)
+                # Last file
+                content = content.stylize("$text", path.rfind("/") + 1)
             else:
-                content = content.stylize("$text-success dim")
+                pass
+                # content = content.stylize("$text-success dim")
         if (match := re.search(r"\.(.*$)", content.plain)) is not None:
             content = content.stylize("not dim", match.start(1), match.end(1))
         return content
@@ -359,7 +369,7 @@ class PathSearch(containers.VerticalGroup):
             [
                 Option(highlighted_path, id=highlighted_path.plain)
                 for highlighted_path in self.highlighted_paths
-            ][:20]
+            ][:100]
         )
         self.option_list.highlighted = 0
         self.post_message(PromptSuggestion(""))

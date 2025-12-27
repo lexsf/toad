@@ -388,7 +388,7 @@ Prompt {
         }
         OptionList {
             border: none;
-            height: 16;           
+            height: 1fr;           
             padding: 0;
             margin: 0 1;                     
             overflow: hidden;
