@@ -60,32 +60,9 @@ class ToolCallHeader(Static):
 
 class ToolCall(containers.VerticalGroup):
     DEFAULT_CLASSES = "block"
-    DEFAULT_CSS = """
-    ToolCall {
-        padding: 0 1;        
-        width: 1fr;
-        layout: stream;
-        height: auto;
-
-        .icon {
-            width: auto;
-            margin-right: 1;
-        }
-        #tool-content {
-            margin-top: 1;            
-            display: none;
-        }
-        &.-expanded {
-            #tool-content {
-                display: block;
-            }
-        }
-    }
-
-    """
 
     app = getters.app(ToadApp)
-    has_content: var[bool] = var(False)
+    has_content: var[bool] = var(False, toggle_class="-has-content")
     expanded: var[bool] = var(False, toggle_class="-expanded")
 
     def __init__(
@@ -137,13 +114,15 @@ class ToolCall(containers.VerticalGroup):
     def compose(self) -> ComposeResult:
         tool_call = self._tool_call
         content: list[protocol.ToolCallContent] = tool_call.get("content", None) or []
-        self.has_content = bool(content)
         title = tool_call.get("title", "title")
+
+        self.has_content = False
+        content_update = list(self._compose_content(content))
 
         yield (header := ToolCallHeader(self.tool_call_header_content, markup=False))
         header.tooltip = title
         with containers.VerticalGroup(id="tool-content"):
-            yield from self._compose_content(content)
+            yield from content_update
 
         self.call_after_refresh(self.check_expand)
 
@@ -176,26 +155,11 @@ class ToolCall(containers.VerticalGroup):
 
         expand_icon: Content = Content()
         if self.has_content:
-            if self.expanded:
-                expand_icon = Content("▼ ")
-            else:
-                expand_icon = Content("▶ ")
+            expand_icon = Content("▼ " if self.expanded else "▶ ")
         else:
             expand_icon = Content.styled("▶ ", "$text 20%")
 
-        # header = Content.assemble(
-        #     expand_icon,
-        #     "🔧 ",
-        #     pill(kind, "$primary-muted", "$text-primary"),
-        #     " ",
-        #     (title, "$text-success"),
-        # )
-
-        header = Content.assemble(
-            expand_icon,
-            "🔧 ",
-            (title, "$text-success"),
-        )
+        header = Content.assemble(expand_icon, "🔧 ", (title, "$text-success"))
 
         if status == "pending":
             header += Content.assemble(" ⏲")
@@ -255,6 +219,7 @@ class ToolCall(containers.VerticalGroup):
             match content:
                 case {"type": "content", "content": sub_content}:
                     yield from compose_content_block(sub_content)
+                    self.has_content = True
                 case {
                     "type": "diff",
                     "path": path,
@@ -269,6 +234,8 @@ class ToolCall(containers.VerticalGroup):
                         diff_view_setting = self.app.settings.get("diff.view", str)
                         diff_view.split = diff_view_setting == "split"
                         diff_view.auto_split = diff_view_setting == "auto"
+
+                    self.has_content = True
 
                 case {"type": "terminal", "terminalId": terminal_id}:
                     pass
