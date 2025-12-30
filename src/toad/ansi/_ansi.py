@@ -1137,11 +1137,14 @@ class TerminalState:
             buffer.cursor_line = fold_cursor_line
             buffer.cursor_offset = fold_cursor_offset
 
-    async def write(self, text: str) -> tuple[set[int] | None, set[int] | None]:
+    async def write(
+        self, text: str, *, hide_output: bool = False
+    ) -> tuple[set[int] | None, set[int] | None]:
         """Write to the terminal.
 
         Args:
             text: Text to write.
+            hide_output: Hide visible output from buffers.
 
         Returns:
             A pair of deltas or `None for full refresh, for scrollback and alternate screen.
@@ -1153,8 +1156,13 @@ class TerminalState:
         alternate_buffer._updated_lines = set()
         scrollback_buffer._updated_lines = set()
         # Write sequences and update
-        for ansi_command in self._ansi_stream.feed(text):
-            await self._handle_ansi_command(ansi_command)
+        if hide_output:
+            for ansi_command in self._ansi_stream.feed(text):
+                if not isinstance(ansi_command, (ANSIContent, ANSICursor)):
+                    await self._handle_ansi_command(ansi_command)
+        else:
+            for ansi_command in self._ansi_stream.feed(text):
+                await self._handle_ansi_command(ansi_command)
 
         # Get deltas
         scrollback_updates = (

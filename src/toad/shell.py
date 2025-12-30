@@ -13,6 +13,7 @@ import termios
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from textual import log
 from textual.message import Message
 
 from toad.shell_read import shell_read
@@ -67,7 +68,6 @@ class Shell:
         self.shell = shell or os.environ.get("SHELL", "sh")
         self.shell_start = start
         self.hide_start = hide_start
-        self.omit_prelude = True
         self.master: int | None = None
         self._task: asyncio.Task | None = None
         self._process: asyncio.subprocess.Process | None = None
@@ -103,6 +103,7 @@ class Shell:
     def start(self) -> None:
         assert self._task is None
         self._task = asyncio.create_task(self.run(), name=repr(self))
+        log("shell starting")
 
     async def interrupt(self) -> None:
         """Interrupt the running command."""
@@ -131,7 +132,10 @@ class Shell:
             for line in text_bytes.split(b"\n"):
                 if line:
                     self._hide_echo.add(line)
-        result = await asyncio.to_thread(os.write, self.master, text_bytes)
+        try:
+            result = await asyncio.to_thread(os.write, self.master, text_bytes)
+        except OSError:
+            return 0
         self._hide_output = hide_output
         return result
 
@@ -187,6 +191,7 @@ class Shell:
         )
 
         self._ready_event.set()
+        log("Shell started")
 
         if shell_start := self.shell_start.strip():
             shell_start = self.shell_start.strip()
@@ -222,10 +227,9 @@ class Shell:
                     #     self.terminal.set_state(previous_state)
                     self.terminal.set_write_to_stdin(self.write)
 
-                if self._hide_output:
-                    terminal_updated = False
-                else:
-                    terminal_updated = await self.terminal.write(line)
+                terminal_updated = await self.terminal.write(
+                    line, hide_output=self._hide_output
+                )
                 if terminal_updated and not self.terminal.display:
                     if (
                         self.terminal.alternate_screen
@@ -233,6 +237,7 @@ class Shell:
                     ):
                         self.terminal.display = True
                 new_directory = self.terminal.current_directory
+                print(new_directory, current_directory)
                 if new_directory and new_directory != current_directory:
                     current_directory = new_directory
                     self.conversation.post_message(

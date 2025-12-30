@@ -1079,7 +1079,7 @@ class Conversation(containers.Vertical):
         self.shell_history.complete.add_words(
             self.app.settings.get("shell.allow_commands", expect_type=str).split()
         )
-
+        self.shell
         if self._agent_data is not None:
 
             def start_agent() -> None:
@@ -1112,7 +1112,6 @@ class Conversation(containers.Vertical):
             self.agent_ready = False
 
     async def watch_agent_ready(self, ready: bool) -> None:
-        self.shell
         with suppress(asyncio.TimeoutError):
             async with asyncio.timeout(2.0):
                 await self.shell.wait_for_ready()
