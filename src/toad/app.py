@@ -266,6 +266,7 @@ class ToadApp(App, inherit_bindings=False):
         )
         self._initial_mode = mode
         self.version_meta: VersionMeta | None = None
+        self._supports_pyperclip: bool | None = None
 
         super().__init__()
 
@@ -307,6 +308,23 @@ class ToadApp(App, inherit_bindings=False):
             self.save_settings()
             self.call_later(self.capture_event, "toad-install")
         return anon_id
+
+    def copy_to_clipboard(self, text: str) -> None:
+        if self._supports_pyperclip is None:
+            try:
+                import pyperclip
+            except ImportError:
+                self._supports_pyperclip = False
+            else:
+                self._supports_pyperclip = True
+
+        import pyperclip
+
+        try:
+            pyperclip.copy(text)
+        except Exception:
+            pass
+        super().copy_to_clipboard(text)
 
     @work(exit_on_error=False)
     async def capture_event(self, event_name: str, **properties: Any) -> None:
