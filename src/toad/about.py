@@ -36,6 +36,7 @@ Additional app data stored in `$DATA_PATH`
 
 | Library | Version |
 | --- | --- | 
+| Toad | ${TOAD_VERSION} |
 | Textual | ${TEXTUAL_VERSION} |
 | Rich | ${RICH_VERSION} |
                           
@@ -43,6 +44,7 @@ Additional app data stored in `$DATA_PATH`
 
 | Environment variable | Value |                
 | --- | --- |
+| `SHELL` | $SHELL |
 | `TERM` | $TERM |
 | `COLORTERM` | $COLORTERM |
 | `TERM_PROGRAM` | $TERM_PROGRAM |
@@ -63,17 +65,18 @@ def render(app: ToadApp) -> str:
         config = None
 
     template_data = {
-        "DATA_PATH": paths.get_data(),
-        "TOAD_VERSION": get_version(),
-        "TEXTUAL_VERSION": version("textual"),
-        "RICH_VERSION": version("rich"),
-        "PYTHON": f"{platform.python_implementation()} {platform.python_version()}",
-        "PLATFORM": platform.platform(),
-        "TERM": os.environ.get("TERM", ""),
         "COLORTERM": os.environ.get("COLORTERM", ""),
-        "TERM_PROGRAM": os.environ.get("TERM_PROGRAM", ""),
-        "TERM_PROGRAM_VERSION": os.environ.get("TERM_PROGRAM_VERSION", ""),
-        "SETTINGS_PATH": str(app.settings_path),
         "CONFIG": config,
+        "DATA_PATH": paths.get_data(),
+        "PLATFORM": platform.platform(),
+        "PYTHON": f"{platform.python_implementation()} {platform.python_version()}",
+        "RICH_VERSION": version("rich"),
+        "SETTINGS_PATH": str(app.settings_path),
+        "SHELL": os.environ.get("SHELL", ""),
+        "TERM_PROGRAM_VERSION": os.environ.get("TERM_PROGRAM_VERSION", ""),
+        "TERM_PROGRAM": os.environ.get("TERM_PROGRAM", ""),
+        "TERM": os.environ.get("TERM", ""),
+        "TEXTUAL_VERSION": version("textual"),
+        "TOAD_VERSION": get_version(),
     }
     return ABOUT_TEMPLATE.safe_substitute(template_data)
