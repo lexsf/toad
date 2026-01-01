@@ -152,7 +152,7 @@ class Contents(containers.VerticalGroup, can_focus=False):
 
     def _refresh_styles(self) -> None:
         """Prevent expensive update of styles"""
-        # TODO: This is undoubtedly bit of a hack.
+        # TODO: Add an option in Textual to do this without overriding a private method
 
 
 class ContentsGrid(containers.Grid):
