@@ -103,7 +103,7 @@ class Cursor(Static):
     blink = var(True, toggle_class="-blink")
 
     def on_mount(self) -> None:
-        self.display = False
+        self.visible = False
         self.blink_timer = self.set_interval(0.5, self._update_blink, pause=True)
 
     def _update_blink(self) -> None:
@@ -113,7 +113,7 @@ class Cursor(Static):
             self.blink = False
 
     def watch_follow_widget(self, widget: Widget | None) -> None:
-        self.display = widget is not None
+        self.visible = widget is not None
 
     def update_follow(self) -> None:
         if self.follow_widget and self.follow_widget.is_attached:
@@ -128,11 +128,11 @@ class Cursor(Static):
         self.follow_widget = widget
         self.blink = False
         if widget is None:
-            self.display = False
+            self.visible = False
             self.blink_timer.reset()
             self.blink_timer.pause()
         else:
-            self.display = True
+            self.visible = True
             self.blink_timer.reset()
             self.blink_timer.resume()
             self.update_follow()
@@ -150,7 +150,7 @@ class Contents(containers.VerticalGroup, can_focus=False):
             )
         return placements
 
-    def _refresh_styles(self) -> None:
+    def update_node_styles(self) -> None:
         """Prevent expensive update of styles"""
         # TODO: Add an option in Textual to do this without overriding a private method
 
@@ -164,6 +164,10 @@ class ContentsGrid(containers.Grid):
 class Window(containers.VerticalScroll):
     BINDING_GROUP_TITLE = "View"
     BINDINGS = [Binding("end", "screen.focus_prompt", "Prompt")]
+
+    def update_node_styles(self) -> None:
+        # TODO: Allow disabling in Textual
+        pass
 
 
 class Conversation(containers.Vertical):
@@ -1391,7 +1395,7 @@ class Conversation(containers.Vertical):
         """
         if reset_cursor:
             self.cursor_offset = -1
-            self.cursor.display = False
+            self.cursor.visible = False
         if scroll_end:
             self.window.scroll_end()
         self.prompt.focus()
