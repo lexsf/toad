@@ -48,7 +48,7 @@ from toad.widgets.prompt import Prompt
 from toad.widgets.terminal import Terminal
 from toad.widgets.throbber import Throbber
 from toad.widgets.user_input import UserInput
-from toad.shell import Shell, CurrentWorkingDirectoryChanged, ShellFinished
+from toad.shell import Shell, CurrentWorkingDirectoryChanged
 from toad.slash_command import SlashCommand
 from toad.protocol import BlockProtocol, MenuProtocol, ExpandProtocol
 from toad.menus import MenuItem
@@ -150,7 +150,7 @@ class Contents(containers.VerticalGroup, can_focus=False):
             )
         return placements
 
-    def update_node_styles(self) -> None:
+    def update_node_styles(self, animate: bool = True) -> None:
         """Prevent expensive update of styles"""
         # TODO: Add an option in Textual to do this without overriding a private method
 
@@ -165,7 +165,7 @@ class Window(containers.VerticalScroll):
     BINDING_GROUP_TITLE = "View"
     BINDINGS = [Binding("end", "screen.focus_prompt", "Prompt")]
 
-    def update_node_styles(self) -> None:
+    def update_node_styles(self, animate: bool = True) -> None:
         # TODO: Allow disabling in Textual
         pass
 
@@ -289,6 +289,9 @@ class Conversation(containers.Vertical):
         self._terminal_count = 0
         self._require_check_prune = False
 
+        self._turn_count = 0
+        self._shell_count = 0
+
     @property
     def agent_title(self) -> str | None:
         if self._agent_data is not None:
@@ -370,6 +373,9 @@ class Conversation(containers.Vertical):
             modes=Conversation.modes,
             status=Conversation.status,
         )
+
+    def update_node_styles(self, animate: bool = True) -> None:
+        self.prompt.update_node_styles(animate=animate)
 
     @property
     def _terminal(self) -> Terminal | None:
@@ -565,6 +571,8 @@ class Conversation(containers.Vertical):
                 agent=self._agent_data["identity"],
                 duration=session_time,
                 agent_session_fail=self._agent_fail,
+                shell_count=self._shell_count,
+                turn_count=self._turn_count,
             ).wait()
 
     @on(AgentFail)
@@ -677,6 +685,7 @@ class Conversation(containers.Vertical):
         self._agent_thought = None
         self.post_message(messages.ProjectDirectoryUpdated())
         self.prompt.project_directory_updated()
+        self._turn_count += 1
         if self.app.settings.get("notifications.turn_over", bool):
             self.app.system_notify(
                 f"{self.agent_title} has finished working",
@@ -1311,6 +1320,7 @@ class Conversation(containers.Vertical):
         from toad.widgets.shell_result import ShellResult
 
         if command.strip():
+            self._shell_count += 1
             await self.post(ShellResult(command))
             width, height = self.get_terminal_dimensions()
             await self.shell.send(command, width, height)

@@ -234,7 +234,7 @@ class PromptTextArea(HighlightedTextArea):
         self.insert("\n")
 
     def action_submit(self) -> None:
-        if not self.agent_ready:
+        if not self.agent_ready and not self.shell_mode:
             self.app.bell()
             self.post_message(
                 messages.Flash(

@@ -12,6 +12,10 @@ SettingsScreen {
         }
     }
 
+    #settings-container {
+        layout: stream;     
+    }
+
     .hidden {
         display: none;
     }

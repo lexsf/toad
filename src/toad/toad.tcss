@@ -63,6 +63,9 @@ App.-hide-info-bar #info-container {
 
 App.-compact-input Prompt #prompt-container {
     border: none;
+    &:focus-within {
+        border: none;
+    }
 }
 
 Checkbox {

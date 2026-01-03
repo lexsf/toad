@@ -14,6 +14,8 @@ SCHEMA: list[SchemaDict] = [
                 "type": "choices",
                 "default": "dracula",
                 "choices": [
+                    "atom-one-dark",
+                    "atom-one-light",
                     "catppuccin-latte",
                     "catppuccin-mocha",
                     "dracula",
@@ -40,7 +42,7 @@ SCHEMA: list[SchemaDict] = [
             },
             {
                 "key": "footer",
-                "title": "Enabled footer?",
+                "title": "Enable footer?",
                 "help": "Disable the footer if you want additional room.",
                 "type": "boolean",
                 "default": True,

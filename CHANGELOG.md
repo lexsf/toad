@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.5.16] - 2026-01-03
+
+### Fixed
+
+- Fixed prompt settings not taking effect
+- Fixed tool calls expanding but not updating the cursor
+
+### Added
+
+- Added atom-one-dark and atom-one-light themes
+
+### Changed
+
+- Allowed shell commands to be submitted prior to agent ready
+
 ## [0.5.15] - 2026-01-01
 
 ### Added
@@ -102,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First release. This document will be updated for subsequent releases.
 
+[0.5.16: https://github.com/Textualize/textual/compare/v0.5.15...v0.5.16
 [0.5.15: https://github.com/Textualize/textual/compare/v0.5.14...v0.5.15
 [0.5.14: https://github.com/Textualize/textual/compare/v0.5.13...v0.5.14
 [0.5.13: https://github.com/Textualize/textual/compare/v0.5.12...v0.5.13
