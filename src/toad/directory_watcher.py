@@ -4,7 +4,6 @@ from textual.message import Message
 from textual.widget import Widget
 
 from pathlib import Path
-import threading
 from watchdog.events import (
     DirModifiedEvent,
     FileModifiedEvent,
@@ -19,15 +18,14 @@ class DirectoryChanged(Message):
 
 
 @rich.repr.auto
-class DirectoryWatcher(threading.Thread, FileSystemEventHandler):
+class DirectoryWatcher(FileSystemEventHandler):
     """Watch a directory for changes."""
 
     def __init__(self, path: Path, widget: Widget) -> None:
         self._path = path
         self._widget = widget
         self._observer = Observer()
-        self._exit_event = threading.Event()
-        super().__init__(name=repr(self))
+        super().__init__()
 
     def on_any_event(self, event: FileSystemEvent) -> None:
         if not isinstance(event, (DirModifiedEvent, FileModifiedEvent)):
@@ -43,14 +41,7 @@ class DirectoryWatcher(threading.Thread, FileSystemEventHandler):
 
         self._observer.schedule(self, str(self._path), recursive=True)
         self._observer.start()
-        super().start()
 
     def stop(self) -> None:
         """Stop the watcher."""
-        self._exit_event.set()
-
-    def run(self):
-        """Run the thread."""
-        while not self._exit_event.wait(1):
-            # Nothing to do here. The Observer object is doing the work.
-            pass
+        self._observer.stop()
