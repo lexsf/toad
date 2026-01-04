@@ -42,9 +42,9 @@ $CONFIG
 
 | Library | Version |
 | --- | --- | 
-| Toad | ${TOAD_VERSION} |
-| Textual | ${TEXTUAL_VERSION} |
-| Rich | ${RICH_VERSION} |
+| Toad | $TOAD_VERSION |
+| Textual | $TEXTUAL_VERSION |
+| Rich | $RICH_VERSION |
                           
 ## Environment
 
