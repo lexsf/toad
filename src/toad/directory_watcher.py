@@ -6,8 +6,6 @@ from textual.widget import Widget
 
 from pathlib import Path
 from watchdog.events import (
-    DirModifiedEvent,
-    FileModifiedEvent,
     FileSystemEvent,
     FileSystemEventHandler,
     FileCreatedEvent,
@@ -35,22 +33,7 @@ class DirectoryWatcher(FileSystemEventHandler):
         super().__init__()
 
     def on_any_event(self, event: FileSystemEvent) -> None:
-        """We want to respond to files or directories being added, removed, or removed.
-
-        We want to ignore any changes changes that are purely file data or metadata.
-        """
-        if not isinstance(
-            event,
-            (
-                FileCreatedEvent,
-                FileDeletedEvent,
-                FileMovedEvent,
-                DirCreatedEvent,
-                DirDeletedEvent,
-                DirMovedEvent,
-            ),
-        ):
-            return
+        """Send DirectoryChanged event when the FS is updated."""
         self._widget.post_message(DirectoryChanged())
 
     def __rich_repr__(self) -> rich.repr.Result:
@@ -60,7 +43,19 @@ class DirectoryWatcher(FileSystemEventHandler):
     def start(self) -> None:
         """Start the watcher."""
 
-        self._observer.schedule(self, str(self._path), recursive=True)
+        self._observer.schedule(
+            self,
+            str(self._path),
+            recursive=True,
+            event_filter=[
+                FileCreatedEvent,
+                FileDeletedEvent,
+                FileMovedEvent,
+                DirCreatedEvent,
+                DirDeletedEvent,
+                DirMovedEvent,
+            ],
+        )
         self._observer.start()
 
     async def stop(self) -> None:
