@@ -89,8 +89,8 @@ STOP_REASON_MAX_TOKENS = f"""\
 
 $AGENT reported that your account is out of tokens.
 
-- You may need to purchase tokens, or fund your account
-- If your account has tokens, try running any login or auth process again
+- You may need to purchase additional tokens, or fund your account.
+- If your account has tokens, try running any login or auth process again.
 
 If that fails, ask on {HELP_URL}
 """
@@ -715,8 +715,6 @@ class Conversation(containers.Vertical):
         self.post_message(messages.ProjectDirectoryUpdated())
         self.prompt.project_directory_updated()
         self._turn_count += 1
-
-        stop_reason = "max_tokens"
 
         if stop_reason != "end_turn":
             from toad.widgets.markdown_note import MarkdownNote
