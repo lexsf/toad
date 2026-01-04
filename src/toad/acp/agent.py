@@ -505,7 +505,7 @@ class Agent(AgentBase):
                     continue
 
             if not isinstance(agent_data, dict):
-                self.log("Invalid JSON from agent {agent_data!r}")
+                self.log("[error] Invalid JSON from agent {agent_data!r}")
                 continue
 
             # By this point we know it is a JSON RPC call
