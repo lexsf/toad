@@ -614,6 +614,7 @@ MainScreen {
                          
         DirectoryTree {  
             height: 1fr;                                  
+            background: transparent;
             &:focus {
                 background-tint: transparent;
             }                                        
