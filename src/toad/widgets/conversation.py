@@ -321,7 +321,8 @@ class Conversation(containers.Vertical):
         self._directory_changed = False
         self._directory_watcher: DirectoryWatcher | None = None
 
-    def update_title(self):
+    def update_title(self) -> None:
+        """Update the screen title."""
 
         def path_with_tilde(path: Path) -> str:
             """Convert path to use ~ for home directory if applicable."""

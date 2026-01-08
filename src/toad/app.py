@@ -342,6 +342,7 @@ class ToadApp(App, inherit_bindings=False):
         super().copy_to_clipboard(text)
 
     def update_terminal_title(self) -> None:
+        """Update the terminal title."""
         screen_title = self.screen.title
 
         title = (
