@@ -7,7 +7,11 @@ from textual import getters
 
 
 class CommandEditModal(ModalScreen[str | None]):
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
+    BINDINGS = [
+        ("ctrl+c", "copy", "Copy to clipboard"),
+        ("escape", "dismiss", "Dismiss"),
+    ]
+    AUTO_FOCUS = "Button"
 
     text_area = getters.query_one(widgets.TextArea)
 
@@ -23,12 +27,20 @@ class CommandEditModal(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with containers.VerticalGroup(id="container"):
+            with containers.Center():
+                yield widgets.Label(
+                    "[b]Run command",
+                    classes="instructions",
+                )
             yield widgets.Static(
-                "Toad will run the following command(s).\n\nEdit if you want to.",
+                "Toad will run the following command (edit if you need to).",
                 classes="instructions",
             )
             yield widgets.TextArea(
-                self.command, language="bash", highlight_cursor_line=False
+                self.command,
+                language="bash",
+                highlight_cursor_line=False,
+                soft_wrap=False,
             )
             with containers.HorizontalGroup(id="button-container"):
                 yield widgets.Button("OK", variant="primary", id="ok")
@@ -44,6 +56,10 @@ class CommandEditModal(ModalScreen[str | None]):
     @on(widgets.Button.Pressed, "#cancel")
     def on_cancel_pressed(self, event: widgets.Button.Pressed) -> None:
         self.dismiss(None)
+
+    def action_copy(self) -> None:
+        self.app.copy_to_clipboard(self.text_area.text)
+        self.notify("Command copied to clipboard", title="Copy")
 
 
 if __name__ == "__main__":

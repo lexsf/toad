@@ -216,15 +216,15 @@ CommandEditModal {
             margin: 3 6;
             height: 1fr;
             height: auto;
-            max-width: 100;
+            max-width: 80;
 
             .instructions {                
-                color: $text-success;
+                color: $text-primary;
                 padding: 0 1 1 1;                            
             }
 
             TextArea {
-                height: 8
+                height: 6
             }
 
             #button-container {
