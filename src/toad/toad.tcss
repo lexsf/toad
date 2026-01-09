@@ -746,10 +746,10 @@ HelpPanel {
     
     border-left: solid white 7%;
     padding-right: 0;
-    color: $text-secondary;
+    # color: $text-secondary;
     
     #widget-help {
-        color: $text-secondary;
+        # color: $text-secondary;
         border: round $secondary;
         background: transparent;
         margin-top: 0;
@@ -766,14 +766,15 @@ HelpPanel {
     }
 
     KeyPanel {
-        color: $text-secondary;
+        # color: $text-secondary;
         scrollbar-gutter: stable;        
         &> BindingsTable > .bindings-table--description {            
-            color: $text-secondary;
+            # color: $text-secondary;
             text-opacity:90%;
         }
         .bindings-table--key {
-            color: $text-secondary;  
+            # color: $text-secondary;  
+            color: $text;
         }
         &> BindingsTable > .bindings-table--header {        
             color: $primary;
