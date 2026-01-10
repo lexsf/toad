@@ -204,7 +204,7 @@ See on-screen instructions for details.
             event.prevent_default()
         elif self.shell_mode and event.key == "tab":
             event.prevent_default()
-        else:
+        elif event.key != "escape":
             self.suggestions = None
             self.suggestion = ""
 
@@ -217,7 +217,8 @@ See on-screen instructions for details.
         if self.shell_mode and self.cursor_at_end_of_text and "\n" not in self.text:
             if prompt.complete_callback is not None:
                 if completes := prompt.complete_callback(self.text):
-                    self.suggestion = completes[-1]
+                    if self.text not in completes:
+                        self.suggestion = completes[-1]
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "newline" and self.multi_line:
