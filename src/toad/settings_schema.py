@@ -120,6 +120,22 @@ SCHEMA: list[SchemaDict] = [
                 "type": "boolean",
                 "default": True,
             },
+            {
+                "key": "prune_low_mark",
+                "title": "Target lines",
+                "help": "Keep at least this many number of lines of conversation (minimum 100).",
+                "type": "integer",
+                "default": 1500,
+                "validate": [{"type": "minimum", "value": 100}],
+            },
+            {
+                "key": "prune_excess",
+                "title": "Additional lines",
+                "help": "Start removing lines when the conversation has this number of lines more than the target (see 'Target lines').",
+                "type": "integer",
+                "default": 1000,
+                "validate": [{"type": "minimum", "value": 0}],
+            },
         ],
     },
     {

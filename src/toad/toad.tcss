@@ -184,7 +184,7 @@ Conversation {
         scrollbar-size-vertical: 2;        
         padding: 0 1 0 1;       
         height: 1fr;                
-        align: left bottom;
+        align: left bottom;   
     }
 
     &.-scrollbar-thin {
@@ -219,14 +219,14 @@ Conversation {
         width: 1fr;
         overflow: hidden;         
         height: auto;  
-        padding: 0 0 0 0;                 
+        padding: 0 0 0 0;                         
     }    
 
     ContentsGrid {            
         grid-size: 2;
         grid-columns: 1 1fr;
         grid-rows: auto;
-        height: auto;
+        height: auto;                
     }
 
     #cursor-container {            

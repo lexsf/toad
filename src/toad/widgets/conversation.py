@@ -186,6 +186,7 @@ class Cursor(Static):
 
 
 class Contents(containers.VerticalGroup, can_focus=False):
+    BLANK = True
 
     def process_layout(
         self, placements: list[WidgetPlacement]
@@ -200,6 +201,7 @@ class Contents(containers.VerticalGroup, can_focus=False):
 
 
 class ContentsGrid(containers.Grid):
+    BLANK = True
 
     def pre_layout(self, layout) -> None:
         assert isinstance(layout, GridLayout)
@@ -207,8 +209,7 @@ class ContentsGrid(containers.Grid):
 
 
 class CursorContainer(containers.Vertical):
-
-    pass
+    BLANK = True
 
 
 class Window(containers.VerticalScroll):
@@ -231,6 +232,7 @@ This is a view of your conversation with the agent.
 class Conversation(containers.Vertical):
     """Holds the agent conversation (input, output, and various controls / information)."""
 
+    BLANK = True
     BINDING_GROUP_TITLE = "Conversation"
     CURSOR_BINDING_GROUP = Binding.Group(description="Cursor")
     BINDINGS = [
@@ -1353,7 +1355,9 @@ class Conversation(containers.Vertical):
     async def check_prune(self) -> None:
         """Check if a prune is required."""
         if self._require_check_prune:
-            await self.prune_window(1500, 2500)
+            low_mark = self.app.settings.get("ui.prune_low_mark", int)
+            high_mark = low_mark + self.app.settings.get("ui.prune_excess", int)
+            await self.prune_window(low_mark, high_mark)
             self._require_check_prune = False
 
     async def prune_window(self, low_mark: int, high_mark: int) -> None:
@@ -1390,6 +1394,8 @@ class Conversation(containers.Vertical):
 
         if prune_children:
             await contents.remove_children(prune_children)
+            self.screen.refresh(layout=True)
+            self.call_after_refresh(self.window.anchor)
 
     async def new_terminal(self) -> Terminal:
         """Create a new interactive Terminal.
