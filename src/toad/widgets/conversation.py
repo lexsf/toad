@@ -11,6 +11,8 @@ from time import monotonic
 
 from typing import Callable, Any
 
+from rich.segment import Segment
+
 from textual import log, on, work
 from textual.app import ComposeResult
 from textual import containers
@@ -19,15 +21,16 @@ from textual import events
 from textual.actions import SkipAction
 from textual.binding import Binding
 from textual.content import Content
-from textual.geometry import clamp, Size
+from textual.geometry import clamp
 from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Static
 from textual.widgets.markdown import MarkdownBlock, MarkdownFence
-from textual.geometry import Offset, Spacing
-from textual.reactive import var, Reactive
+from textual.geometry import Offset, Spacing, Region
+from textual.reactive import var
 from textual.layouts.grid import GridLayout
 from textual.layout import WidgetPlacement
+from textual.strip import Strip
 
 
 from toad import jsonrpc, messages
@@ -209,7 +212,9 @@ class ContentsGrid(containers.Grid):
 
 
 class CursorContainer(containers.Vertical):
-    BLANK = True
+    def render_lines(self, crop: Region) -> list[Strip]:
+        rich_style = self.visual_style.rich_style
+        return [Strip([Segment("▌", rich_style)], cell_length=1)] * crop.height
 
 
 class Window(containers.VerticalScroll):
@@ -1345,7 +1350,10 @@ class Conversation(containers.Vertical):
         if not self.contents.is_attached:
             return widget
 
+        if not any(child.display for child in self.contents.children):
+            widget.add_class("-first")
         await self.contents.mount(widget)
+
         widget.loading = loading
         if anchor:
             self.window.anchor()

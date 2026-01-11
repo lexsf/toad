@@ -2,6 +2,10 @@
     margin: 1 1 1 0;  
 }
 
+.-first {
+    margin-top: 0 !important;
+}
+
 Markdown {
     layout: stream;
 }
@@ -231,9 +235,9 @@ Conversation {
 
     #cursor-container {            
         height: auto;
-        width: 1;                                
-        outline-left: outer $foreground 7%;        
-        outline-top: blank;
+        width: 1;                    
+        color: $foreground 7%;            
+                
         &> Cursor {
             height: 0;            
             width: 1;     
