@@ -5,6 +5,7 @@ from textual import getters
 from textual.app import ComposeResult
 
 from textual import work
+from textual.content import Content
 from textual.screen import ModalScreen
 from textual import containers
 from textual import widgets
@@ -68,7 +69,9 @@ class AgentModal(ModalScreen):
             with containers.VerticalGroup():
                 if "install_acp" in commands:
                     yield widgets.Static(
-                        f"{agent['name']} requires an ACP adapter to work with Toad. Install from the actions list.",
+                        Content(
+                            f"{agent['name']} requires an ACP adapter to work with Toad. Install from the actions list."
+                        ),
                         classes="acp-warning",
                     )
                 with containers.HorizontalGroup():
