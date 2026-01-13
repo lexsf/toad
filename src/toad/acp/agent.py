@@ -294,13 +294,16 @@ class Agent(AgentBase):
         """
         result_future: asyncio.Future[Answer] = asyncio.Future()
         tool_call_id = toolCall["toolCallId"]
-        if tool_call_id not in self.tool_calls:
-            permission_tool_call = toolCall.copy()
-            permission_tool_call.pop("sessionUpdate", None)
-            tool_call = cast(protocol.ToolCall, permission_tool_call)
-            self.tool_calls[tool_call_id] = deepcopy(tool_call)
+
+        permission_tool_call = toolCall.copy()
+        permission_tool_call.pop("sessionUpdate", None)
+        tool_call = cast(protocol.ToolCall, permission_tool_call)
+        if tool_call_id in self.tool_calls:
+            self.tool_calls[tool_call_id] |= tool_call
         else:
-            tool_call = deepcopy(self.tool_calls[tool_call_id])
+            self.tool_calls[tool_call_id] = deepcopy(tool_call)
+
+        tool_call = deepcopy(self.tool_calls[tool_call_id])
 
         message = messages.RequestPermission(options, tool_call, result_future)
         self.post_message(message)

@@ -285,10 +285,11 @@ class DiffView(containers.VerticalGroup):
             text_lines_a = self.code_before.splitlines()
             text_lines_b = self.code_after.splitlines()
             sequence_matcher = difflib.SequenceMatcher(
-                lambda character: character in " \t",
+                # lambda character: character in " \t",
+                None,
                 text_lines_a,
                 text_lines_b,
-                autojunk=True,
+                # autojunk=True,
             )
             self._grouped_opcodes = list(sequence_matcher.get_grouped_opcodes())
 
@@ -332,17 +333,25 @@ class DiffView(containers.VerticalGroup):
 
             sequence_matcher = difflib.SequenceMatcher(
                 lambda character: character in " \t",
-                self.code_before,
-                self.code_after,
+                code_a.plain,
+                code_b.plain,
                 autojunk=True,
             )
             code_a_spans: list[Span] = []
             code_b_spans: list[Span] = []
             for tag, i1, i2, j1, j2 in sequence_matcher.get_opcodes():
-                if tag == "delete" and "\n" not in code_a.plain[i1 : i2 + 1]:
+                if (
+                    tag
+                    in {"delete", "replace"}
+                    # and "\n" not in code_a.plain[i1 : i2 + 1]
+                ):
                     code_a_spans.append(Span(i1, i2, "on $error 40%"))
 
-                if tag == "insert" and "\n" not in code_b.plain[j1 : j2 + 1]:
+                if (
+                    tag
+                    in {"insert", "replace"}
+                    # and "\n" not in code_b.plain[j1 : j2 + 1]
+                ):
                     code_b_spans.append(Span(j1, j2, "on $success 40%"))
 
             code_a = code_a.add_spans(code_a_spans)

@@ -234,18 +234,30 @@ def settings() -> None:
     print(f"{app.settings_path}")
 
 
-# @main.command("replay")
-# @click.argument("path", metavar="PATH.jsonl")
-# def replay(path: str) -> None:
-#     """Replay interaction from a jsonl file."""
-#     import time
+@main.command("replay")
+@click.argument("path", metavar="FILE")
+def replay(path: str) -> None:
+    """Replay interaction from a log file.
 
-#     stdout = sys.stdout.buffer
-#     with open(path, "rb") as replay_file:
-#         for line in replay_file.readlines():
-#             time.sleep(0.1)
-#             stdout.write(line)
-#             stdout.flush()
+    This is a debugging aid. You probably won't need it unless you are building an agent.
+
+    Run it in place of a command line to run an ACP agent:
+
+    toad acp "toad replay toad.log"
+
+    This will replay the agents output, and Toad will update the conversation as it would a real agent.
+    """
+    import time
+
+    stdout = sys.stdout.buffer
+    with open(path, "rb") as replay_file:
+        for line in replay_file.readlines():
+            sender, space, json_line = line.partition(b" ")
+            if sender == b"[agent]":
+                stdout.write(json_line.strip() + b"\n")
+            time.sleep(0.01)
+            stdout.write(line)
+            stdout.flush()
 
 
 @main.command("serve")

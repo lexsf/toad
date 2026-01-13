@@ -427,7 +427,7 @@ class ToadApp(App, inherit_bindings=False):
         except Exception:
             pass
 
-    @work(thread=True)
+    @work(thread=True, exit_on_error=False)
     def system_notify(
         self, message: str, *, title: str = "", sound: str | None = None
     ) -> None:
@@ -436,6 +436,7 @@ class ToadApp(App, inherit_bindings=False):
         Args:
             message: Message to display.
             title: Title of the notificaiton.
+            sound: filename (minus .wav) of a sound effect in the sounds/ directory.
         """
         system_notifications = self.settings.get("notifications.system", str)
         if not (

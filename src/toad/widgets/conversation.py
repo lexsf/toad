@@ -3,9 +3,10 @@ from __future__ import annotations
 from asyncio import Future
 import asyncio
 from contextlib import suppress
+from functools import partial
 from itertools import filterfalse
 from operator import attrgetter
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Iterable, Literal
 from pathlib import Path
 from time import monotonic
 
@@ -38,6 +39,7 @@ from toad import paths
 from toad.agent_schema import Agent as AgentData
 from toad.acp import messages as acp_messages
 from toad.app import ToadApp
+from toad.acp.protocol import ToolCallContent
 from toad.acp import protocol as acp_protocol
 from toad.acp.agent import Mode
 from toad.answer import Answer
@@ -1133,59 +1135,57 @@ class Conversation(containers.Vertical):
         options: list[Answer],
         tool_call_update: acp_protocol.ToolCallUpdatePermissionRequest,
     ) -> None:
-        kind = tool_call_update.get("kind")
+        kind = tool_call_update.get("kind", None)
+        title = tool_call_update.get("title", "") or ""
 
-        title: str | None = None
-        if kind is None:
-            from toad.widgets.tool_call import ToolCall
+        print("request_permission")
+        from textual import log
 
-            if (contents := tool_call_update.get("content")) is not None:
-                title = tool_call_update.get("title")
-                for content in contents:
-                    match content:
-                        case {"type": "text", "content": {"text": text}}:
-                            await self.post(ToolCall(text))
-
-            def answer_callback(answer: Answer) -> None:
-                try:
-                    result_future.set_result(answer)
-                except Exception:
-                    # I've seen this occur in shutdown with an `InvalidStateError`
-                    pass
-
-            self.ask(options, title or "", answer_callback)
-            return
+        print(tool_call_update)
 
         if kind == "edit":
-            from toad.screens.permissions import PermissionsScreen
+            diffs: list[tuple[str, str, str | None, str]] = []
 
-            async def populate(screen: PermissionsScreen) -> None:
-                if (contents := tool_call_update.get("content")) is None:
-                    return
-                for content in contents:
-                    match content:
-                        case {
-                            "type": "diff",
-                            "oldText": old_text,
-                            "newText": new_text,
-                            "path": path,
-                        }:
-                            await screen.add_diff(path, path, old_text, new_text)
+            contents = tool_call_update.get("content", []) or []
+            for content in contents:
+                match content:
+                    case {
+                        "type": "diff",
+                        "oldText": old_text,
+                        "newText": new_text,
+                        "path": path,
+                    }:
+                        diffs.append((path, path, old_text, new_text))
 
-            permissions_screen = PermissionsScreen(options, populate_callback=populate)
-            result = await self.app.push_screen_wait(permissions_screen)
-            result_future.set_result(result)
-        else:
-            title = tool_call_update.get("title", "") or ""
+            if diffs:
+                from toad.screens.permissions import PermissionsScreen
 
-            def answer_callback(answer: Answer) -> None:
-                try:
-                    result_future.set_result(answer)
-                except Exception:
-                    # I've seen this occur in shutdown with an `InvalidStateError`
-                    pass
+                permissions_screen = PermissionsScreen(options, diffs)
+                result = await self.app.push_screen_wait(permissions_screen)
+                result_future.set_result(result)
+                return
 
-            self.ask(options, title, answer_callback)
+        from toad.widgets.acp_content import ACPToolCallContent
+
+        def answer_callback(answer: Answer) -> None:
+            try:
+                result_future.set_result(answer)
+            except Exception:
+                # I've seen this occur in shutdown with an `InvalidStateError`
+                pass
+
+        tool_call_content = tool_call_update.get("content", None) or []
+        self.ask(
+            options,
+            title or "",
+            (
+                partial(ACPToolCallContent, tool_call_content)
+                if tool_call_content
+                else None
+            ),
+            answer_callback,
+        )
+        return
 
     async def post_tool_call(
         self, tool_call_update: acp_protocol.ToolCallUpdate
@@ -1222,7 +1222,8 @@ class Conversation(containers.Vertical):
     def ask(
         self,
         options: list[Answer],
-        question: str = "",
+        title: str = "",
+        get_content: Callable[[], Widget] | None = None,
         callback: Callable[[Answer], Any] | None = None,
     ) -> None:
         """Replace the prompt with a dialog to ask a question
@@ -1237,13 +1238,13 @@ class Conversation(containers.Vertical):
         self.agent_info
 
         if self.agent_title:
-            notify_title = f"[{self.agent_title}] {question}"
+            notify_title = f"[{self.agent_title}] {title}"
         else:
-            notify_title = question
+            notify_title = title
         notify_message = "\n".join(f" • {option.text}" for option in options)
         self.app.system_notify(notify_message, title=notify_title, sound="question")
 
-        self.prompt.ask(Ask(question, options, callback))
+        self.prompt.ask(Ask(title, options, get_content, callback))
 
     def _build_slash_commands(self) -> list[SlashCommand]:
         slash_commands = [

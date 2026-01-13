@@ -1,8 +1,5 @@
-import asyncio
-
 import os
-from typing import Awaitable, Callable
-from textual import on
+from textual import work, on
 from textual.app import ComposeResult
 from textual import containers
 
@@ -177,15 +174,24 @@ class PermissionsScreen(Screen[Answer]):
     def __init__(
         self,
         options: list[Answer],
-        populate_callback: Callable[["PermissionsScreen"], Awaitable] | None,
+        diffs: list[tuple[str, str, str | None, str]] | None = None,
         *,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ):
+        """
+
+        Args:
+            options: Potential answers to the permission request.
+            diffs: List of diffs to display, tuples of (PATH1, PATH2, SOURCE1, SOURCE2)
+            name: Textual name attribute.
+            id: Textual id attribute.
+            classe: Textual classes.
+        """
         super().__init__(name=name, id=id, classes=classes)
         self.options = options
-        self.populate_callback = populate_callback
+        self.diffs = diffs
 
     def get_diff_type(self) -> str:
         app = self.app
@@ -247,14 +253,18 @@ class PermissionsScreen(Screen[Answer]):
             self.query_one("#diff-select", Select).value = diff_view_setting
         self.navigator.highlighted = 0
 
-        if self.populate_callback is not None:
-
-            async def run_populate():
-                if self.populate_callback is not None:
-                    await self.populate_callback(self)
-
-            asyncio.create_task(run_populate())
+        self._add_diffs()
         self.question.focus()
+
+    @work
+    async def _add_diffs(self) -> None:
+        """Add any diffs given in the constructor."""
+        if self.diffs is None:
+            return
+        diffs = self.diffs[:]
+        self.diffs = None
+        for diff in diffs:
+            await self.add_diff(*diff)
 
     async def add_diff(
         self, path1: str, path2: str, before: str | None, after: str

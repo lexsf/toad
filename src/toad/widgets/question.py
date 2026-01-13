@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from textual.app import ComposeResult
 from textual import events, on
@@ -24,6 +24,7 @@ class Ask:
 
     question: str
     options: Options
+    get_content: Callable[[], Widget] | None = None
     callback: Callable[[Answer], Any] | None = None
 
 
@@ -104,7 +105,7 @@ class Option(containers.HorizontalGroup):
         self.post_message(self.Selected(self.index))
 
 
-class Question(Widget, can_focus=True):
+class Question(containers.VerticalGroup, can_focus=True):
     """A text question with a menu of responses."""
 
     BINDING_GROUP_TITLE = "Question"
@@ -162,10 +163,14 @@ class Question(Widget, can_focus=True):
         height: auto;
         padding: 0 1; 
         background: transparent;
-        #prompt {
+        #title {
             margin-bottom: 1;
             color: $text-primary;
-        }                
+        }
+        #question-container {
+            margin-bottom: 1;
+        }
+
         &.-blink Option.-active #caret {
             opacity: 0.2;
         }
@@ -180,7 +185,7 @@ class Question(Widget, can_focus=True):
     }
     """
 
-    question: var[str] = var("")
+    title: var[str] = var("")
     options: var[Options] = var(list)
 
     selection: reactive[int] = reactive(0, init=False)
@@ -203,7 +208,8 @@ class Question(Widget, can_focus=True):
 
     def __init__(
         self,
-        question: str = "Ask and you will receive",
+        title: str = "Ask and you will receive",
+        get_content: Callable[[], Widget] | None = None,
         options: Options | None = None,
         name: str | None = None,
         id: str | None = None,
@@ -211,7 +217,8 @@ class Question(Widget, can_focus=True):
         disabled: bool = False,
     ):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
-        self.set_reactive(Question.question, question)
+        self.set_reactive(Question.title, title)
+        self._get_content = get_content
         self.set_reactive(Question.options, options or [])
 
     def on_mount(self) -> None:
@@ -228,34 +235,38 @@ class Question(Widget, can_focus=True):
         self._blink_timer.reset()
 
     def update(self, ask: Ask) -> None:
-        self.question = ask.question
+        self.title = ask.question
+        self._get_content = ask.get_content
         self.options = ask.options
         self.selection = 0
         self.selected = False
         self.refresh(recompose=True, layout=True)
 
     def compose(self) -> ComposeResult:
-        with containers.VerticalGroup():
-            if self.question:
-                yield Label(self.question, id="prompt", markup=False)
+        if self.title:
+            yield Label(self.title, id="title", markup=False)
 
-            with containers.VerticalGroup(id="option-container"):
-                kinds: set[str] = set()
-                for index, answer in enumerate(self.options):
-                    active = index == self.selection
-                    key = (
-                        self.DEFAULT_KINDS.get(answer.kind)
-                        if (answer.kind and answer.kind not in kinds)
-                        else None
-                    )
-                    yield Option(
-                        index,
-                        Content(answer.text),
-                        key,
-                        classes="-active" if active else "",
-                    ).data_bind(Question.selected)
-                    if answer.kind is not None:
-                        kinds.add(answer.kind)
+        if self._get_content is not None:
+            with containers.VerticalGroup(id="contents"):
+                yield self._get_content()
+
+        with containers.VerticalGroup(id="option-container"):
+            kinds: set[str] = set()
+            for index, answer in enumerate(self.options):
+                active = index == self.selection
+                key = (
+                    self.DEFAULT_KINDS.get(answer.kind)
+                    if (answer.kind and answer.kind not in kinds)
+                    else None
+                )
+                yield Option(
+                    index,
+                    Content(answer.text),
+                    key,
+                    classes="-active" if active else "",
+                ).data_bind(Question.selected)
+                if answer.kind is not None:
+                    kinds.add(answer.kind)
 
     def watch_selection(self, old_selection: int, new_selection: int) -> None:
         self.query("#option-container > .-active").remove_class("-active")

@@ -459,8 +459,33 @@ Prompt {
 
     Question {
         display: none;
-        #prompt {
+        #title {
             width: 1fr;            
+        }
+        height: auto;        
+        
+        #title {
+            margin: 0;
+        }
+
+        #contents {
+            margin-top: 0;
+            height: auto;            
+            overflow: auto;
+            max-height: 50vh;  
+            margin-bottom: 1;
+            DiffView {
+                .diff-group {                    
+                    margin-bottom: 0;
+                }
+            }
+            & > * {                
+                margin: 1 0 0 0;
+            }          
+        }
+        #option-container {
+            # margin-top: 1;
+            dock: bottom;
         }
     }
     &.-mode-ask {

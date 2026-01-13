@@ -16,7 +16,6 @@ import rich.repr
 from typing import Callable, ParamSpec, TypeVar
 from typeguard import check_type, CollectionCheckStrategy, TypeCheckError
 
-import textual
 
 type MethodType = Callable
 type JSONValue = str | int | float | bool | None
